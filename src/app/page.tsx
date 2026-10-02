@@ -3,7 +3,7 @@
 import { AppBar } from "@/components/brand";
 import { StartSessionButton } from "@/components/ui";
 import { experiences } from "@/data/sample";
-import { formatSessionWhen } from "@/lib/dates";
+import { formatSessionWhen, formatSubmittedAt } from "@/lib/dates";
 import { useFacility } from "@/lib/facility-store";
 
 export default function DashboardPage() {
@@ -172,7 +172,10 @@ export default function DashboardPage() {
               <p className="text-lg text-stone-700">
                 {request.requestedBy}. {request.note}
               </p>
-              <p className="text-lg text-stone-500">Received {request.received}</p>
+              <p className="text-lg text-stone-500">
+                {formatSubmittedAt(request.submittedAt, `Received ${request.received}`)}
+                {request.status ? ` · ${request.status}` : ""}
+              </p>
             </li>
           ))}
         </ul>

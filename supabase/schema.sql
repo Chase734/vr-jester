@@ -49,6 +49,7 @@ create table if not exists public.residents (
   cultural_interests text[] not null default '{}',
   topics_to_avoid text[] not null default '{}',
   staff_notes text not null default '',
+  family_link_token uuid unique default gen_random_uuid(),
   vr_comfort_level text not null default 'New to VR',
   favorite_experiences text[] not null default '{}',
   past_experiences text[] not null default '{}',
@@ -75,7 +76,14 @@ create table if not exists public.family_requests (
   requested_by text not null default '',
   experience text not null,
   note text not null default '',
-  received text not null default 'Just now'
+  received text not null default 'Just now',
+  relationship text not null default '',
+  approximate_year text not null default '',
+  why_it_matters text not null default '',
+  staff_should_know text not null default '',
+  status text not null default 'New',
+  submitted_at timestamptz not null default now(),
+  session_id text references public.sessions (id) on delete set null
 );
 
 insert into public.facilities (id, name)
@@ -212,3 +220,5 @@ alter table public.residents add column if not exists animals text[] not null de
 alter table public.residents add column if not exists cultural_interests text[] not null default '{}';
 alter table public.residents add column if not exists topics_to_avoid text[] not null default '{}';
 alter table public.residents add column if not exists staff_notes text not null default '';
+
+-- Family request links. For an existing database, also run supabase/family-requests.sql.

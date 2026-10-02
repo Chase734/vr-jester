@@ -96,6 +96,11 @@ type FacilityContextValue = FacilityState & {
   removeFamilyMember: (id: string, name: string) => void;
   logSession: (residentId: string, experience: string) => void;
   addRequest: (residentId: string, experience: string, requestedBy: string, note: string) => void;
+  updateRequest: (
+    id: string,
+    patch: Partial<Pick<FamilyRequest, "status" | "sessionId">>,
+  ) => void;
+  ensureFamilyLink: (residentId: string) => Promise<string>;
 };
 
 const FacilityContext = createContext<FacilityContextValue | null>(null);
@@ -462,6 +467,13 @@ export function FacilityProvider({ children }: { children: ReactNode }) {
           experience: destination,
           note: note.trim(),
           received: "Just now",
+          relationship: requestedBy.trim() ? "Family or staff" : "Staff",
+          approximateYear: "",
+          whyItMatters: "",
+          staffShouldKnow: "",
+          status: "New",
+          submittedAt: new Date().toISOString(),
+          sessionId: null,
         };
         const futureRequests = resident.futureRequests.includes(destination)
           ? resident.futureRequests
@@ -498,6 +510,58 @@ export function FacilityProvider({ children }: { children: ReactNode }) {
       });
     };
 
+    const updateRequest = (
+      id: string,
+      patch: Partial<Pick<FamilyRequest, "status" | "sessionId">>,
+    ) => {
+      setState((current) => {
+        const next = current.familyRequests.map((request) =>
+          request.id === id ? { ...request, ...patch } : request,
+        );
+        const updated = next.find((request) => request.id === id);
+        if (updated) {
+          void supabase
+            .from("family_requests")
+            .update({
+              status: updated.status,
+              session_id: updated.sessionId,
+            })
+            .eq("id", id);
+        }
+        return { ...current, familyRequests: next };
+      });
+    };
+
+    const ensureFamilyLink = async (residentId: string) => {
+      const existing = state.residents.find((resident) => resident.id === residentId);
+      if (existing?.familyLinkToken) {
+        return existing.familyLinkToken;
+      }
+      const { data } = await supabase
+        .from("residents")
+        .select("family_link_token")
+        .eq("id", residentId)
+        .maybeSingle();
+      let token = (data?.family_link_token as string | undefined) ?? "";
+      if (!token) {
+        token = crypto.randomUUID();
+        const { error } = await supabase
+          .from("residents")
+          .update({ family_link_token: token })
+          .eq("id", residentId);
+        if (error) {
+          throw error;
+        }
+      }
+      setState((current) => ({
+        ...current,
+        residents: current.residents.map((resident) =>
+          resident.id === residentId ? { ...resident, familyLinkToken: token } : resident,
+        ),
+      }));
+      return token;
+    };
+
     return {
       ...state,
       profile,
@@ -515,6 +579,8 @@ export function FacilityProvider({ children }: { children: ReactNode }) {
       removeFamilyMember,
       logSession,
       addRequest,
+      updateRequest,
+      ensureFamilyLink,
     };
   }, [hydrated, state]);
 

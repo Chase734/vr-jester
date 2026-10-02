@@ -26,6 +26,21 @@ export function formatSessionWhen(iso: string) {
   return `${dayNames[date.getDay()]} at ${time}`;
 }
 
+export function formatSubmittedAt(iso: string, fallback: string) {
+  if (!iso) {
+    return fallback;
+  }
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return fallback;
+  }
+  return date.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 export function formatBirthday(iso: string) {
   if (!iso) {
     return "Not recorded yet";

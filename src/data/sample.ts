@@ -40,6 +40,7 @@ export type Resident = {
   culturalInterests: string[];
   topicsToAvoid: string[];
   staffNotes: string;
+  familyLinkToken?: string;
   vrComfortLevel: VrComfortLevel;
   favoriteExperiences: string[];
   pastExperiences: string[];
@@ -58,6 +59,8 @@ export type Session = {
   status: "upcoming" | "completed";
 };
 
+export type RequestStatus = "New" | "Approved" | "Completed" | "Declined";
+
 export type FamilyRequest = {
   id: string;
   facilityId?: string;
@@ -67,6 +70,13 @@ export type FamilyRequest = {
   experience: string;
   note: string;
   received: string;
+  relationship: string;
+  approximateYear: string;
+  whyItMatters: string;
+  staffShouldKnow: string;
+  status: RequestStatus;
+  submittedAt: string;
+  sessionId: string | null;
 };
 
 export const emptyLifeStory = {
@@ -400,6 +410,13 @@ export const familyRequests: FamilyRequest[] = [
     experience: "Dublin, Ireland",
     note: "Dad grew up near there.",
     received: "This morning",
+    relationship: "Daughter",
+    approximateYear: "",
+    whyItMatters: "He grew up near there.",
+    staffShouldKnow: "",
+    status: "New",
+    submittedAt: "2026-10-02T08:00:00",
+    sessionId: null,
   },
   {
     id: "f2",
@@ -409,6 +426,13 @@ export const familyRequests: FamilyRequest[] = [
     experience: "Seoul, South Korea",
     note: "She has been asking about home.",
     received: "Yesterday",
+    relationship: "Son",
+    approximateYear: "",
+    whyItMatters: "She has been asking about home.",
+    staffShouldKnow: "",
+    status: "New",
+    submittedAt: "2026-10-01T08:00:00",
+    sessionId: null,
   },
   {
     id: "f3",
@@ -418,6 +442,13 @@ export const familyRequests: FamilyRequest[] = [
     experience: "Mexico City",
     note: "They used to visit every winter.",
     received: "Monday",
+    relationship: "Spouse",
+    approximateYear: "",
+    whyItMatters: "They used to visit every winter.",
+    staffShouldKnow: "",
+    status: "New",
+    submittedAt: "2026-09-28T08:00:00",
+    sessionId: null,
   },
 ];
 

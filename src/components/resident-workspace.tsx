@@ -11,7 +11,7 @@ import {
   type Resident,
   type VrComfortLevel,
 } from "@/data/sample";
-import { formatBirthday, formatSessionWhen } from "@/lib/dates";
+import { formatBirthday, formatSessionWhen, formatSubmittedAt } from "@/lib/dates";
 import { useFacility, type ListKey } from "@/lib/facility-store";
 
 const tabs = [
@@ -46,6 +46,8 @@ export function ResidentWorkspace({ residentId }: { residentId: string }) {
     removeFamilyMember,
     logSession,
     addRequest,
+    updateRequest,
+    ensureFamilyLink,
   } = useFacility();
   const [tab, setTab] = useState<Tab>("Life Story");
   const [familyName, setFamilyName] = useState("");
@@ -53,6 +55,7 @@ export function ResidentWorkspace({ residentId }: { residentId: string }) {
   const [sessionPlace, setSessionPlace] = useState("");
   const [requestPlace, setRequestPlace] = useState("");
   const [requestFrom, setRequestFrom] = useState("");
+  const [linkMessage, setLinkMessage] = useState("");
 
   const resident = residents.find((item) => item.id === residentId);
 
@@ -89,9 +92,26 @@ export function ResidentWorkspace({ residentId }: { residentId: string }) {
         </p>
       </header>
 
-      <div className="mb-6">
+      <div className="mb-4">
         <StartSessionButton residentId={resident.id} />
       </div>
+      <button
+        type="button"
+        className="mb-6 inline-flex min-h-16 w-full items-center justify-center rounded-2xl border-2 border-navy bg-white px-8 text-2xl font-semibold text-navy"
+        onClick={async () => {
+          try {
+            const token = await ensureFamilyLink(resident.id);
+            const url = `${window.location.origin}/family/${token}`;
+            await navigator.clipboard.writeText(url);
+            setLinkMessage("Family link copied. Send it by text or email.");
+          } catch {
+            setLinkMessage("Could not copy the family link. Try again.");
+          }
+        }}
+      >
+        Copy Family Link
+      </button>
+      {linkMessage ? <p className="mb-6 text-lg text-navy">{linkMessage}</p> : null}
 
       <div className="mb-6 flex flex-wrap gap-2" role="tablist" aria-label="Resident sections">
         {tabs.map((item) => (
@@ -354,19 +374,85 @@ export function ResidentWorkspace({ residentId }: { residentId: string }) {
               </form>
             </div>
             <div>
-              <SectionLabel>Open requests</SectionLabel>
+              <SectionLabel>Family requests</SectionLabel>
               {residentRequests.length === 0 ? (
                 <p className="mt-3 text-lg text-stone-500">No family requests yet.</p>
               ) : (
                 <ul className="mt-3 divide-y divide-stone-200">
                   {residentRequests.map((request) => (
-                    <li key={request.id} className="py-3">
+                    <li key={request.id} className="py-5 first:pt-0">
                       <p className="text-xl font-medium">{request.experience}</p>
-                      <p className="text-lg text-stone-600">
+                      <p className="text-lg text-stone-700">
                         {request.requestedBy}
-                        {request.note ? `. ${request.note}` : ""}
+                        {request.relationship ? ` · ${request.relationship}` : ""}
                       </p>
-                      <p className="text-lg text-stone-500">Received {request.received}</p>
+                      {request.approximateYear ? (
+                        <p className="text-lg text-stone-600">Around {request.approximateYear}</p>
+                      ) : null}
+                      {request.whyItMatters ? (
+                        <p className="mt-2 text-lg text-stone-700">{request.whyItMatters}</p>
+                      ) : null}
+                      {request.note ? (
+                        <p className="mt-1 text-lg text-stone-700">{request.note}</p>
+                      ) : null}
+                      {request.staffShouldKnow ? (
+                        <p className="mt-1 text-lg text-stone-600">
+                          Staff should know: {request.staffShouldKnow}
+                        </p>
+                      ) : null}
+                      <p className="mt-2 text-lg text-stone-500">
+                        {formatSubmittedAt(request.submittedAt, request.received)} · {request.status}
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {request.status === "New" ? (
+                          <button
+                            type="button"
+                            className="min-h-12 rounded-xl bg-navy px-4 text-lg font-semibold text-white"
+                            onClick={() => updateRequest(request.id, { status: "Approved" })}
+                          >
+                            Approve
+                          </button>
+                        ) : null}
+                        {request.status === "Approved" ? (
+                          <button
+                            type="button"
+                            className="min-h-12 rounded-xl bg-navy px-4 text-lg font-semibold text-white"
+                            onClick={() => updateRequest(request.id, { status: "Completed" })}
+                          >
+                            Mark completed
+                          </button>
+                        ) : null}
+                        {request.status === "New" || request.status === "Approved" ? (
+                          <button
+                            type="button"
+                            className="min-h-12 rounded-xl border border-stone-300 bg-white px-4 text-lg"
+                            onClick={() => updateRequest(request.id, { status: "Declined" })}
+                          >
+                            Decline
+                          </button>
+                        ) : null}
+                      </div>
+                      {request.status === "Completed" ? (
+                        <label className="mt-3 block">
+                          <span className="text-lg font-medium">Connected VR session</span>
+                          <select
+                            className={`${fieldClass} mt-1`}
+                            value={request.sessionId ?? ""}
+                            onChange={(event) =>
+                              updateRequest(request.id, {
+                                sessionId: event.target.value || null,
+                              })
+                            }
+                          >
+                            <option value="">Not connected yet</option>
+                            {residentSessions.map((session) => (
+                              <option key={session.id} value={session.id}>
+                                {session.experience} — {formatSessionWhen(session.startsAt)}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      ) : null}
                     </li>
                   ))}
                 </ul>

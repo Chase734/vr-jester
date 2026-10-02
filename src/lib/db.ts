@@ -47,6 +47,7 @@ export type ResidentRow = {
   cultural_interests: string[];
   topics_to_avoid: string[];
   staff_notes: string;
+  family_link_token?: string;
   vr_comfort_level: Resident["vrComfortLevel"];
   favorite_experiences: string[];
   past_experiences: string[];
@@ -90,6 +91,7 @@ export function residentFromRow(row: ResidentRow): Resident {
     culturalInterests: row.cultural_interests ?? [],
     topicsToAvoid: row.topics_to_avoid ?? [],
     staffNotes: row.staff_notes ?? "",
+    familyLinkToken: row.family_link_token ?? "",
     vrComfortLevel: row.vr_comfort_level,
     favoriteExperiences: row.favorite_experiences ?? [],
     pastExperiences: row.past_experiences ?? [],
@@ -174,6 +176,13 @@ export type RequestRow = {
   experience: string;
   note: string;
   received: string;
+  relationship?: string;
+  approximate_year?: string;
+  why_it_matters?: string;
+  staff_should_know?: string;
+  status?: FamilyRequest["status"];
+  submitted_at?: string;
+  session_id?: string | null;
 };
 
 export function requestFromRow(row: RequestRow): FamilyRequest {
@@ -186,5 +195,12 @@ export function requestFromRow(row: RequestRow): FamilyRequest {
     experience: row.experience,
     note: row.note,
     received: row.received,
+    relationship: row.relationship ?? "",
+    approximateYear: row.approximate_year ?? "",
+    whyItMatters: row.why_it_matters ?? "",
+    staffShouldKnow: row.staff_should_know ?? "",
+    status: row.status ?? "New",
+    submittedAt: row.submitted_at ?? "",
+    sessionId: row.session_id ?? null,
   };
 }
