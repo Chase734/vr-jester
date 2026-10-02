@@ -18,12 +18,13 @@ import {
   type Resident,
   type Session,
 } from "@/data/sample";
-import { MAPLE_GROVE_FACILITY_ID } from "@/lib/constants";
+import { MAPLE_GROVE_FACILITY_ID, SELECTED_FACILITY_KEY } from "@/lib/constants";
 import {
   requestFromRow,
   residentFromRow,
   residentToRow,
   sessionFromRow,
+  type Facility,
   type RequestRow,
   type ResidentRow,
   type SessionRow,
@@ -56,6 +57,8 @@ const listColumn: Record<ListKey, keyof ResidentRow> = {
 
 type FacilityState = {
   profile: StaffProfile | null;
+  facilities: Facility[];
+  selectedFacilityId: string;
   residents: Resident[];
   sessions: Session[];
   familyRequests: FamilyRequest[];
@@ -63,6 +66,8 @@ type FacilityState = {
 
 type FacilityContextValue = FacilityState & {
   hydrated: boolean;
+  isAdmin: boolean;
+  selectFacility: (id: string) => void;
   addResident: (name: string, room: string) => Resident;
   updateResident: (id: string, patch: Partial<Resident>) => void;
   addListItem: (id: string, key: ListKey, value: string) => void;
@@ -77,16 +82,45 @@ const FacilityContext = createContext<FacilityContextValue | null>(null);
 
 const empty: FacilityState = {
   profile: null,
+  facilities: [],
+  selectedFacilityId: MAPLE_GROVE_FACILITY_ID,
   residents: [],
   sessions: [],
   familyRequests: [],
 };
 
-function writeFacilityId(profile: StaffProfile | null) {
+function rememberFacility(id: string) {
+  try {
+    localStorage.setItem(SELECTED_FACILITY_KEY, id);
+  } catch {
+    // Ignore private-mode storage errors.
+  }
+}
+
+function recalledFacility() {
+  try {
+    return localStorage.getItem(SELECTED_FACILITY_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function pickFacilityId(profile: StaffProfile | null, facilities: Facility[]) {
   if (profile?.role === "staff" && profile.facilityId) {
     return profile.facilityId;
   }
-  return MAPLE_GROVE_FACILITY_ID;
+  const remembered = recalledFacility();
+  if (remembered && facilities.some((facility) => facility.id === remembered)) {
+    return remembered;
+  }
+  if (facilities.some((facility) => facility.id === MAPLE_GROVE_FACILITY_ID)) {
+    return MAPLE_GROVE_FACILITY_ID;
+  }
+  return facilities[0]?.id ?? MAPLE_GROVE_FACILITY_ID;
+}
+
+function inFacility<T extends { facilityId?: string }>(items: T[], facilityId: string) {
+  return items.filter((item) => (item.facilityId || MAPLE_GROVE_FACILITY_ID) === facilityId);
 }
 
 export function FacilityProvider({ children }: { children: ReactNode }) {
@@ -131,6 +165,12 @@ export function FacilityProvider({ children }: { children: ReactNode }) {
                 : "Your facility"),
           }
         : null;
+
+      const { data: facilityRows } = await supabase.from("facilities").select("id, name").order("name");
+      const facilities: Facility[] = ((facilityRows ?? []) as Facility[]).map((facility) => ({
+        id: facility.id,
+        name: facility.name,
+      }));
 
       if (profile && (profile.role === "admin" || profile.facilityId === MAPLE_GROVE_FACILITY_ID)) {
         const { count } = await supabase
@@ -179,6 +219,11 @@ export function FacilityProvider({ children }: { children: ReactNode }) {
 
       setState({
         profile,
+        facilities:
+          profile?.role === "staff" && profile.facilityId
+            ? [{ id: profile.facilityId, name: profile.facilityName }]
+            : facilities,
+        selectedFacilityId: pickFacilityId(profile, facilities),
         residents: ((residentRows ?? []) as ResidentRow[]).map(residentFromRow),
         sessions: ((sessionRows ?? []) as SessionRow[]).map(sessionFromRow),
         familyRequests: ((requestRows ?? []) as RequestRow[]).map(requestFromRow),
@@ -194,7 +239,20 @@ export function FacilityProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<FacilityContextValue>(() => {
     const supabase = createClient();
-    const facilityId = writeFacilityId(state.profile);
+    const facilityId = state.selectedFacilityId;
+    const selected = state.facilities.find((facility) => facility.id === facilityId);
+    const profile =
+      state.profile && selected
+        ? { ...state.profile, facilityId: selected.id, facilityName: selected.name }
+        : state.profile;
+    const residents = inFacility(state.residents, facilityId);
+    const sessions = inFacility(state.sessions, facilityId);
+    const familyRequests = inFacility(state.familyRequests, facilityId);
+
+    const selectFacility = (id: string) => {
+      rememberFacility(id);
+      setState((current) => ({ ...current, selectedFacilityId: id }));
+    };
 
     const addResident = (name: string, room: string) => {
       const resident = { ...createBlankResident(name, room), facilityId };
@@ -316,6 +374,7 @@ export function FacilityProvider({ children }: { children: ReactNode }) {
         const sessionFacilityId = resident.facilityId || facilityId;
         const session: Session = {
           id: `s-${crypto.randomUUID()}`,
+          facilityId: sessionFacilityId,
           residentId,
           residentName: resident.name,
           experience: destination,
@@ -376,6 +435,7 @@ export function FacilityProvider({ children }: { children: ReactNode }) {
         }
         const request: FamilyRequest = {
           id: `f-${crypto.randomUUID()}`,
+          facilityId: resident.facilityId || facilityId,
           residentId,
           residentName: resident.name,
           requestedBy: requestedBy.trim() || "Staff",
@@ -407,9 +467,8 @@ export function FacilityProvider({ children }: { children: ReactNode }) {
           })
           .eq("id", residentId);
         return {
+          ...current,
           familyRequests: [request, ...current.familyRequests],
-          sessions: current.sessions,
-          profile: current.profile,
           residents: current.residents.map((item) =>
             item.id === residentId
               ? { ...item, futureRequests, placesTheyWantToVisit }
@@ -421,7 +480,13 @@ export function FacilityProvider({ children }: { children: ReactNode }) {
 
     return {
       ...state,
+      profile,
+      residents,
+      sessions,
+      familyRequests,
       hydrated,
+      isAdmin: state.profile?.role === "admin",
+      selectFacility,
       addResident,
       updateResident,
       addListItem,

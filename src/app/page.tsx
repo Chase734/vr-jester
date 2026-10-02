@@ -7,7 +7,7 @@ import { formatSessionWhen } from "@/lib/dates";
 import { useFacility } from "@/lib/facility-store";
 
 export default function DashboardPage() {
-  const { residents, sessions, familyRequests, profile } = useFacility();
+  const { residents, sessions, familyRequests, profile, isAdmin } = useFacility();
   const needsVisit = residents.filter((resident) => resident.engagement === "Needs a visit").length;
   const weekStart = new Date("2026-09-28T00:00:00");
   const weekEnd = new Date("2026-10-04T23:59:59");
@@ -23,7 +23,14 @@ export default function DashboardPage() {
       <header className="mb-8">
         <div className="flex items-baseline justify-between gap-4">
           <p className="text-lg text-stone-600">VR Jester</p>
-          <LogoutButton />
+          <div className="flex items-baseline gap-4">
+            {isAdmin ? (
+              <a href="/facilities" className="text-lg text-emerald-800 underline">
+                Facilities
+              </a>
+            ) : null}
+            <LogoutButton />
+          </div>
         </div>
         <h1 className="mt-1 text-4xl font-semibold tracking-tight text-stone-900">
           {profile?.facilityName ?? "Maple Grove Senior Living"}

@@ -8,6 +8,11 @@ export type StaffProfile = {
   facilityName: string;
 };
 
+export type Facility = {
+  id: string;
+  name: string;
+};
+
 export type ResidentRow = {
   id: string;
   facility_id: string;
@@ -103,6 +108,7 @@ export type SessionRow = {
 export function sessionFromRow(row: SessionRow): Session {
   return {
     id: row.id,
+    facilityId: row.facility_id,
     residentId: row.resident_id,
     residentName: row.resident_name,
     experience: row.experience,
@@ -125,6 +131,7 @@ export type RequestRow = {
 export function requestFromRow(row: RequestRow): FamilyRequest {
   return {
     id: row.id,
+    facilityId: row.facility_id,
     residentId: row.resident_id,
     residentName: row.resident_name,
     requestedBy: row.requested_by,

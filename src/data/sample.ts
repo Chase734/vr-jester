@@ -34,6 +34,7 @@ export type Resident = {
 
 export type Session = {
   id: string;
+  facilityId?: string;
   residentId: string;
   residentName: string;
   experience: string;
@@ -43,6 +44,7 @@ export type Session = {
 
 export type FamilyRequest = {
   id: string;
+  facilityId?: string;
   residentId: string;
   residentName: string;
   requestedBy: string;
