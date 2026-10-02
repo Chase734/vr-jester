@@ -33,6 +33,22 @@ create table if not exists public.residents (
   interests text[] not null default '{}',
   family_members jsonb not null default '[]',
   mobility_notes text not null default '',
+  high_school text not null default '',
+  career text not null default '',
+  spouse_partner text not null default '',
+  children_grandchildren text[] not null default '{}',
+  childhood_memories text not null default '',
+  wedding_honeymoon text not null default '',
+  meaningful_places text[] not null default '{}',
+  restaurants_landmarks text[] not null default '{}',
+  major_life_events text[] not null default '{}',
+  music text[] not null default '{}',
+  movies_tv text[] not null default '{}',
+  food text[] not null default '{}',
+  animals text[] not null default '{}',
+  cultural_interests text[] not null default '{}',
+  topics_to_avoid text[] not null default '{}',
+  staff_notes text not null default '',
   vr_comfort_level text not null default 'New to VR',
   favorite_experiences text[] not null default '{}',
   past_experiences text[] not null default '{}',
@@ -178,3 +194,21 @@ grant select on public.profiles to authenticated;
 grant select, insert, update, delete on public.residents to authenticated;
 grant select, insert, update, delete on public.sessions to authenticated;
 grant select, insert, update, delete on public.family_requests to authenticated;
+
+-- Optional Life Story columns. Safe if this file is run again on an existing database.
+alter table public.residents add column if not exists high_school text not null default '';
+alter table public.residents add column if not exists career text not null default '';
+alter table public.residents add column if not exists spouse_partner text not null default '';
+alter table public.residents add column if not exists children_grandchildren text[] not null default '{}';
+alter table public.residents add column if not exists childhood_memories text not null default '';
+alter table public.residents add column if not exists wedding_honeymoon text not null default '';
+alter table public.residents add column if not exists meaningful_places text[] not null default '{}';
+alter table public.residents add column if not exists restaurants_landmarks text[] not null default '{}';
+alter table public.residents add column if not exists major_life_events text[] not null default '{}';
+alter table public.residents add column if not exists music text[] not null default '{}';
+alter table public.residents add column if not exists movies_tv text[] not null default '{}';
+alter table public.residents add column if not exists food text[] not null default '{}';
+alter table public.residents add column if not exists animals text[] not null default '{}';
+alter table public.residents add column if not exists cultural_interests text[] not null default '{}';
+alter table public.residents add column if not exists topics_to_avoid text[] not null default '{}';
+alter table public.residents add column if not exists staff_notes text not null default '';

@@ -41,7 +41,17 @@ export type ListKey =
   | "favoriteExperiences"
   | "pastExperiences"
   | "futureRequests"
-  | "favoritePlaces";
+  | "favoritePlaces"
+  | "childrenGrandchildren"
+  | "meaningfulPlaces"
+  | "restaurantsLandmarks"
+  | "majorLifeEvents"
+  | "music"
+  | "moviesTv"
+  | "food"
+  | "animals"
+  | "culturalInterests"
+  | "topicsToAvoid";
 
 const listColumn: Record<ListKey, keyof ResidentRow> = {
   placesLived: "places_lived",
@@ -53,6 +63,16 @@ const listColumn: Record<ListKey, keyof ResidentRow> = {
   pastExperiences: "past_experiences",
   futureRequests: "future_requests",
   favoritePlaces: "favorite_places",
+  childrenGrandchildren: "children_grandchildren",
+  meaningfulPlaces: "meaningful_places",
+  restaurantsLandmarks: "restaurants_landmarks",
+  majorLifeEvents: "major_life_events",
+  music: "music",
+  moviesTv: "movies_tv",
+  food: "food",
+  animals: "animals",
+  culturalInterests: "cultural_interests",
+  topicsToAvoid: "topics_to_avoid",
 };
 
 type FacilityState = {

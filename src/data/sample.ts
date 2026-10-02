@@ -24,6 +24,22 @@ export type Resident = {
   interests: string[];
   familyMembers: FamilyMember[];
   mobilityNotes: string;
+  highSchool: string;
+  career: string;
+  spousePartner: string;
+  childrenGrandchildren: string[];
+  childhoodMemories: string;
+  weddingHoneymoon: string;
+  meaningfulPlaces: string[];
+  restaurantsLandmarks: string[];
+  majorLifeEvents: string[];
+  music: string[];
+  moviesTv: string[];
+  food: string[];
+  animals: string[];
+  culturalInterests: string[];
+  topicsToAvoid: string[];
+  staffNotes: string;
   vrComfortLevel: VrComfortLevel;
   favoriteExperiences: string[];
   pastExperiences: string[];
@@ -53,12 +69,31 @@ export type FamilyRequest = {
   received: string;
 };
 
+export const emptyLifeStory = {
+  highSchool: "",
+  career: "",
+  spousePartner: "",
+  childrenGrandchildren: [] as string[],
+  childhoodMemories: "",
+  weddingHoneymoon: "",
+  meaningfulPlaces: [] as string[],
+  restaurantsLandmarks: [] as string[],
+  majorLifeEvents: [] as string[],
+  music: [] as string[],
+  moviesTv: [] as string[],
+  food: [] as string[],
+  animals: [] as string[],
+  culturalInterests: [] as string[],
+  topicsToAvoid: [] as string[],
+  staffNotes: "",
+};
+
 export const facility = {
   name: "Maple Grove Senior Living",
   staffName: "Pat Rivera",
 };
 
-export const residents: Resident[] = [
+const mapleGroveSample = [
   {
     id: "r1",
     name: "Helen Park",
@@ -273,7 +308,13 @@ export const residents: Resident[] = [
     sessionsThisMonth: 5,
     engagement: "Very active",
   },
-];
+].map((resident) => ({
+  ...emptyLifeStory,
+  ...resident,
+  vrComfortLevel: resident.vrComfortLevel,
+})) as Resident[];
+
+export const residents: Resident[] = mapleGroveSample;
 
 export const experiences = [
   { name: "Paris, France", trips: 9 },
@@ -418,6 +459,7 @@ export function createBlankResident(name: string, room: string): Resident {
     interests: [],
     familyMembers: [],
     mobilityNotes: "",
+    ...emptyLifeStory,
     vrComfortLevel: "New to VR",
     favoriteExperiences: [],
     pastExperiences: [],

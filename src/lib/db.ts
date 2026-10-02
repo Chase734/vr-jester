@@ -31,6 +31,22 @@ export type ResidentRow = {
   interests: string[];
   family_members: FamilyMember[];
   mobility_notes: string;
+  high_school: string;
+  career: string;
+  spouse_partner: string;
+  children_grandchildren: string[];
+  childhood_memories: string;
+  wedding_honeymoon: string;
+  meaningful_places: string[];
+  restaurants_landmarks: string[];
+  major_life_events: string[];
+  music: string[];
+  movies_tv: string[];
+  food: string[];
+  animals: string[];
+  cultural_interests: string[];
+  topics_to_avoid: string[];
+  staff_notes: string;
   vr_comfort_level: Resident["vrComfortLevel"];
   favorite_experiences: string[];
   past_experiences: string[];
@@ -58,6 +74,22 @@ export function residentFromRow(row: ResidentRow): Resident {
     interests: row.interests ?? [],
     familyMembers: row.family_members ?? [],
     mobilityNotes: row.mobility_notes ?? "",
+    highSchool: row.high_school ?? "",
+    career: row.career ?? "",
+    spousePartner: row.spouse_partner ?? "",
+    childrenGrandchildren: row.children_grandchildren ?? [],
+    childhoodMemories: row.childhood_memories ?? "",
+    weddingHoneymoon: row.wedding_honeymoon ?? "",
+    meaningfulPlaces: row.meaningful_places ?? [],
+    restaurantsLandmarks: row.restaurants_landmarks ?? [],
+    majorLifeEvents: row.major_life_events ?? [],
+    music: row.music ?? [],
+    moviesTv: row.movies_tv ?? [],
+    food: row.food ?? [],
+    animals: row.animals ?? [],
+    culturalInterests: row.cultural_interests ?? [],
+    topicsToAvoid: row.topics_to_avoid ?? [],
+    staffNotes: row.staff_notes ?? "",
     vrComfortLevel: row.vr_comfort_level,
     favoriteExperiences: row.favorite_experiences ?? [],
     pastExperiences: row.past_experiences ?? [],
@@ -86,6 +118,22 @@ export function residentToRow(resident: Resident, facilityId: string): ResidentR
     interests: resident.interests,
     family_members: resident.familyMembers,
     mobility_notes: resident.mobilityNotes,
+    high_school: resident.highSchool,
+    career: resident.career,
+    spouse_partner: resident.spousePartner,
+    children_grandchildren: resident.childrenGrandchildren,
+    childhood_memories: resident.childhoodMemories,
+    wedding_honeymoon: resident.weddingHoneymoon,
+    meaningful_places: resident.meaningfulPlaces,
+    restaurants_landmarks: resident.restaurantsLandmarks,
+    major_life_events: resident.majorLifeEvents,
+    music: resident.music,
+    movies_tv: resident.moviesTv,
+    food: resident.food,
+    animals: resident.animals,
+    cultural_interests: resident.culturalInterests,
+    topics_to_avoid: resident.topicsToAvoid,
+    staff_notes: resident.staffNotes,
     vr_comfort_level: resident.vrComfortLevel,
     favorite_experiences: resident.favoriteExperiences,
     past_experiences: resident.pastExperiences,
