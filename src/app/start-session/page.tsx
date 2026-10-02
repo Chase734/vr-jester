@@ -13,7 +13,7 @@ function StartSessionForm() {
   const searchParams = useSearchParams();
   const { residents, familyRequests, logSession } = useFacility();
   const [residentId, setResidentId] = useState<string | null>(searchParams.get("resident"));
-  const [log, setLog] = useState(emptySessionLog());
+  const [log, setLog] = useState(emptySessionLog(searchParams.get("destination") || ""));
 
   const resident = residents.find((item) => item.id === residentId);
   const waiting = useMemo(
