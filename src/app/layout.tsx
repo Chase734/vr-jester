@@ -10,7 +10,7 @@ const sourceSans = Source_Sans_3({
 
 export const metadata: Metadata = {
   title: "VR Jester",
-  description: "Facility dashboard for managed virtual travel sessions",
+  description: "Real places. Real experiences. Bucket list moments without boundaries.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

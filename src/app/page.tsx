@@ -1,6 +1,6 @@
 "use client";
 
-import { LogoutButton } from "@/components/logout-button";
+import { AppBar } from "@/components/brand";
 import { StartSessionButton } from "@/components/ui";
 import { experiences } from "@/data/sample";
 import { formatSessionWhen } from "@/lib/dates";
@@ -20,19 +20,17 @@ export default function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-8">
+      <AppBar
+        extra={
+          isAdmin ? (
+            <a href="/facilities" className="text-lg text-navy underline">
+              Facilities
+            </a>
+          ) : null
+        }
+      />
       <header className="mb-8">
-        <div className="flex items-baseline justify-between gap-4">
-          <p className="text-lg text-stone-600">VR Jester</p>
-          <div className="flex items-baseline gap-4">
-            {isAdmin ? (
-              <a href="/facilities" className="text-lg text-emerald-800 underline">
-                Facilities
-              </a>
-            ) : null}
-            <LogoutButton />
-          </div>
-        </div>
-        <h1 className="mt-1 text-4xl font-semibold tracking-tight text-stone-900">
+        <h1 className="text-4xl font-semibold tracking-tight text-navy">
           {profile?.facilityName ?? "Maple Grove Senior Living"}
         </h1>
         <p className="mt-2 text-xl text-stone-700">
@@ -45,7 +43,7 @@ export default function DashboardPage() {
       </div>
       <a
         href="/residents/new"
-        className="mb-8 inline-flex min-h-16 w-full items-center justify-center rounded-2xl border-2 border-emerald-800 bg-white px-8 text-2xl font-semibold text-emerald-900"
+        className="mb-8 inline-flex min-h-16 w-full items-center justify-center rounded-2xl border-2 border-navy bg-white px-8 text-2xl font-semibold text-navy"
       >
         Add resident
       </a>
@@ -79,7 +77,7 @@ export default function DashboardPage() {
                   </a>
                 </p>
                 <p className="text-lg text-stone-700">{session.experience}</p>
-                <p className="text-lg text-emerald-800">{formatSessionWhen(session.startsAt)}</p>
+                <p className="text-lg text-navy">{formatSessionWhen(session.startsAt)}</p>
               </li>
             ))}
           </ul>
@@ -187,7 +185,7 @@ export default function DashboardPage() {
             <li key={resident.id}>
               <a
                 href={`/residents/${resident.id}`}
-                className="block rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 hover:border-emerald-800 hover:bg-white"
+                className="block rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 hover:border-navy hover:bg-white"
               >
                 <p className="text-xl font-medium text-stone-900">{resident.name}</p>
                 <p className="text-lg text-stone-600">{resident.room}</p>

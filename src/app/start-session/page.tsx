@@ -3,7 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { experiences } from "@/data/sample";
-import { LogoutButton } from "@/components/logout-button";
+import { AppBar } from "@/components/brand";
 import { useFacility } from "@/lib/facility-store";
 
 function StartSessionForm() {
@@ -16,13 +16,8 @@ function StartSessionForm() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-8">
-      <div className="flex items-baseline justify-between gap-4">
-        <a href="/" className="text-lg text-emerald-800 underline">
-          Back to dashboard
-        </a>
-        <LogoutButton />
-      </div>
-      <h1 className="mt-4 text-4xl font-semibold tracking-tight text-stone-900">Start Session</h1>
+      <AppBar backHref="/" />
+      <h1 className="text-4xl font-semibold tracking-tight text-navy">Start Session</h1>
       <p className="mt-2 text-xl text-stone-700">
         Pick a resident, then a destination. Then open Wander on the headset.
       </p>
@@ -37,7 +32,7 @@ function StartSessionForm() {
               onClick={() => setResidentId(item.id)}
               className={
                 residentId === item.id
-                  ? "min-h-16 rounded-xl bg-emerald-800 px-4 text-left text-xl font-medium text-white"
+                  ? "min-h-16 rounded-xl bg-navy px-4 text-left text-xl font-medium text-white"
                   : "min-h-16 rounded-xl border border-stone-300 bg-white px-4 text-left text-xl text-stone-900 hover:bg-stone-50"
               }
             >
@@ -58,7 +53,7 @@ function StartSessionForm() {
               onClick={() => setExperience(item.name)}
               className={
                 experience === item.name
-                  ? "min-h-16 rounded-xl bg-emerald-800 px-4 text-left text-xl font-medium text-white"
+                  ? "min-h-16 rounded-xl bg-navy px-4 text-left text-xl font-medium text-white"
                   : "min-h-16 rounded-xl border border-stone-300 bg-white px-4 text-left text-xl text-stone-900 hover:bg-stone-50"
               }
             >
@@ -69,7 +64,7 @@ function StartSessionForm() {
       </section>
 
       {resident && experience ? (
-        <div className="mt-10 rounded-2xl border border-emerald-800 bg-emerald-50 p-6">
+        <div className="mt-10 rounded-2xl border-2 border-gold bg-white p-6">
           <p className="text-2xl font-semibold text-stone-900">Ready</p>
           <p className="mt-2 text-xl text-stone-800">
             {resident.name} is going to {experience}.

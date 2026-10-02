@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ChipList, QuickAdd, SectionLabel, fieldClass } from "@/components/quick-add";
-import { LogoutButton } from "@/components/logout-button";
+import { AppBar } from "@/components/brand";
 import { StartSessionButton } from "@/components/ui";
 import {
   experiences,
@@ -64,7 +64,7 @@ export function ResidentWorkspace({ residentId }: { residentId: string }) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16">
         <h1 className="text-3xl font-semibold">Resident not found</h1>
-        <a href="/" className="mt-6 inline-block text-lg text-emerald-800 underline">
+        <a href="/" className="mt-6 inline-block text-lg text-navy underline">
           Back to dashboard
         </a>
       </div>
@@ -77,12 +77,7 @@ export function ResidentWorkspace({ residentId }: { residentId: string }) {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-8">
-      <div className="flex items-baseline justify-between gap-4">
-        <a href="/" className="text-lg text-emerald-800 underline">
-          Back to dashboard
-        </a>
-        <LogoutButton />
-      </div>
+      <AppBar backHref="/" />
 
       <header className="mt-4 mb-5">
         <p className="text-lg text-stone-600">{resident.room}</p>
@@ -108,7 +103,7 @@ export function ResidentWorkspace({ residentId }: { residentId: string }) {
             onClick={() => setTab(item)}
             className={
               tab === item
-                ? "min-h-14 rounded-xl bg-emerald-800 px-5 text-xl font-semibold text-white"
+                ? "min-h-14 rounded-xl bg-navy px-5 text-xl font-semibold text-white"
                 : "min-h-14 rounded-xl border border-stone-300 bg-white px-5 text-xl text-stone-800"
             }
           >
@@ -234,7 +229,7 @@ export function ResidentWorkspace({ residentId }: { residentId: string }) {
               />
               <button
                 type="submit"
-                className="min-h-14 rounded-xl bg-emerald-800 px-5 text-xl font-semibold text-white"
+                className="min-h-14 rounded-xl bg-navy px-5 text-xl font-semibold text-white"
               >
                 Log trip
               </button>
@@ -352,7 +347,7 @@ export function ResidentWorkspace({ residentId }: { residentId: string }) {
                 />
                 <button
                   type="submit"
-                  className="min-h-14 w-full rounded-xl bg-emerald-800 px-5 text-xl font-semibold text-white"
+                  className="min-h-14 w-full rounded-xl bg-navy px-5 text-xl font-semibold text-white"
                 >
                   Save request
                 </button>
@@ -475,7 +470,7 @@ function ProfileTab({
                 onClick={() => onSave({ vrComfortLevel: level })}
                 className={
                   resident.vrComfortLevel === level
-                    ? "min-h-14 rounded-xl bg-emerald-800 px-3 text-lg font-semibold text-white"
+                    ? "min-h-14 rounded-xl bg-navy px-3 text-lg font-semibold text-white"
                     : "min-h-14 rounded-xl border border-stone-300 bg-white px-3 text-lg"
                 }
               >
@@ -508,7 +503,7 @@ function ProfileTab({
           />
           <button
             type="submit"
-            className="min-h-14 rounded-xl bg-emerald-800 px-5 text-xl font-semibold text-white"
+            className="min-h-14 rounded-xl bg-navy px-5 text-xl font-semibold text-white"
           >
             Add
           </button>

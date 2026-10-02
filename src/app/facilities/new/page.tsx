@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { fieldClass } from "@/components/quick-add";
-import { LogoutButton } from "@/components/logout-button";
+import { AppBar } from "@/components/brand";
 import { SELECTED_FACILITY_KEY } from "@/lib/constants";
 import { useFacility } from "@/lib/facility-store";
 
@@ -23,13 +23,8 @@ export default function NewFacilityPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 sm:px-8">
-      <div className="flex items-baseline justify-between gap-4">
-        <a href="/facilities" className="text-lg text-emerald-800 underline">
-          Back to facilities
-        </a>
-        <LogoutButton />
-      </div>
-      <h1 className="mt-4 text-4xl font-semibold tracking-tight text-stone-900">Add facility</h1>
+      <AppBar backHref="/facilities" backLabel="Back to facilities" />
+      <h1 className="text-4xl font-semibold tracking-tight text-navy">Add facility</h1>
       <p className="mt-2 text-xl text-stone-700">
         This creates a new community and the first staff login for that community. They will only see their own residents.
       </p>
@@ -114,7 +109,7 @@ export default function NewFacilityPage() {
         <button
           type="submit"
           disabled={busy}
-          className="inline-flex min-h-20 w-full items-center justify-center rounded-2xl bg-emerald-800 px-8 text-3xl font-semibold text-white disabled:opacity-60"
+          className="inline-flex min-h-20 w-full items-center justify-center rounded-2xl bg-navy px-8 text-3xl font-semibold text-white disabled:opacity-60"
         >
           {busy ? "Creating…" : "Create facility"}
         </button>

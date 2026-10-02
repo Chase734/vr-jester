@@ -6,7 +6,7 @@ export function LogoutButton() {
   return (
     <button
       type="button"
-      className="text-lg text-emerald-800 underline"
+      className="text-lg text-navy underline"
       onClick={async () => {
         const supabase = createClient();
         await supabase.auth.signOut();

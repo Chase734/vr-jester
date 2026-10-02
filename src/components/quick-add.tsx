@@ -43,7 +43,7 @@ export function QuickAdd({
         />
         <button
           type="submit"
-          className="min-h-14 shrink-0 rounded-xl bg-emerald-800 px-5 text-xl font-semibold text-white"
+          className="min-h-14 shrink-0 rounded-xl bg-navy px-5 text-xl font-semibold text-white"
         >
           Add
         </button>
@@ -88,7 +88,7 @@ export function ChipList({
           <button
             type="button"
             onClick={() => removeListItem(residentId, listKey, item)}
-            className="rounded-full bg-emerald-50 px-4 py-2 text-lg text-emerald-950"
+            className="rounded-full bg-navy/10 px-4 py-2 text-lg text-navy"
           >
             {item} ×
           </button>

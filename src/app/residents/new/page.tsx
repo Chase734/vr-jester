@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { fieldClass } from "@/components/quick-add";
-import { LogoutButton } from "@/components/logout-button";
+import { AppBar } from "@/components/brand";
 import { useFacility } from "@/lib/facility-store";
 
 export default function NewResidentPage() {
@@ -14,13 +14,8 @@ export default function NewResidentPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 sm:px-8">
-      <div className="flex items-baseline justify-between gap-4">
-        <a href="/" className="text-lg text-emerald-800 underline">
-          Back to dashboard
-        </a>
-        <LogoutButton />
-      </div>
-      <h1 className="mt-4 text-4xl font-semibold tracking-tight text-stone-900">Add resident</h1>
+      <AppBar backHref="/" />
+      <h1 className="text-4xl font-semibold tracking-tight text-navy">Add resident</h1>
       <p className="mt-2 text-xl text-stone-700">
         Name is enough to start. You can add interests and travel on the next screen.
       </p>
@@ -58,7 +53,7 @@ export default function NewResidentPage() {
         </label>
         <button
           type="submit"
-          className="inline-flex min-h-20 w-full items-center justify-center rounded-2xl bg-emerald-800 px-8 text-3xl font-semibold text-white"
+          className="inline-flex min-h-20 w-full items-center justify-center rounded-2xl bg-navy px-8 text-3xl font-semibold text-white"
         >
           Create resident
         </button>
