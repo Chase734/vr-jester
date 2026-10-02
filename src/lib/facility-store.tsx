@@ -125,9 +125,10 @@ export function FacilityProvider({ children }: { children: ReactNode }) {
             fullName: (profileRow.full_name as string) || "",
             facilityId: (profileRow.facility_id as string | null) ?? null,
             facilityName:
-              (profileRow.role as string) === "admin"
-                ? facilityName || "All facilities"
-                : facilityName || "Your facility",
+              facilityName ||
+              ((profileRow.role as string) === "admin"
+                ? "Maple Grove Senior Living"
+                : "Your facility"),
           }
         : null;
 
