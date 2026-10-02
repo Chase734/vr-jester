@@ -513,6 +513,7 @@ export function createBlankResident(name: string, room: string): Resident {
   return {
     id: `r-${Date.now()}`,
     facilityId: undefined,
+    familyLinkToken: crypto.randomUUID(),
     name: name.trim(),
     room: room.trim() || "Room unassigned",
     birthday: "",

@@ -1,4 +1,5 @@
 import type { FamilyMember, FamilyRequest, Resident, Session } from "@/data/sample";
+import { isLinkToken } from "@/lib/names";
 
 export type StaffProfile = {
   id: string;
@@ -136,6 +137,9 @@ export function residentToRow(resident: Resident, facilityId: string): ResidentR
     cultural_interests: resident.culturalInterests,
     topics_to_avoid: resident.topicsToAvoid,
     staff_notes: resident.staffNotes,
+    ...(isLinkToken(resident.familyLinkToken ?? "")
+      ? { family_link_token: resident.familyLinkToken }
+      : {}),
     vr_comfort_level: resident.vrComfortLevel,
     favorite_experiences: resident.favoriteExperiences,
     past_experiences: resident.pastExperiences,

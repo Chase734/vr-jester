@@ -62,7 +62,7 @@ set search_path = public
 as $$
 begin
   return query
-  select split_part(trim(r.name), ' ', 1)
+  select split_part(trim(r.name), ' ', 1)::text as first_name
   from public.residents r
   where r.family_link_token = p_token;
 end;
@@ -140,5 +140,5 @@ $$;
 
 revoke all on function public.family_request_preview(uuid) from public;
 revoke all on function public.submit_family_request(uuid, text, text, text, text, text, text, text) from public;
-grant execute on function public.family_request_preview(uuid) to anon;
-grant execute on function public.submit_family_request(uuid, text, text, text, text, text, text, text) to anon;
+grant execute on function public.family_request_preview(uuid) to anon, authenticated;
+grant execute on function public.submit_family_request(uuid, text, text, text, text, text, text, text) to anon, authenticated;

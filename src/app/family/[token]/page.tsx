@@ -22,16 +22,22 @@ export default function FamilyRequestPage({ params }: { params: Promise<{ token:
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      const response = await fetch(`/api/family/${token}`);
-      const payload = (await response.json()) as { firstName?: string };
-      if (cancelled) {
-        return;
+      try {
+        const response = await fetch(`/api/family/${encodeURIComponent(token)}`);
+        const payload = (await response.json()) as { firstName?: string };
+        if (cancelled) {
+          return;
+        }
+        if (!response.ok || !payload.firstName) {
+          setMissing(true);
+          return;
+        }
+        setFirstName(payload.firstName);
+      } catch {
+        if (!cancelled) {
+          setMissing(true);
+        }
       }
-      if (!response.ok || !payload.firstName) {
-        setMissing(true);
-        return;
-      }
-      setFirstName(payload.firstName);
     }
     void load();
     return () => {

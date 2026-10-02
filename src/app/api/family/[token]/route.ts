@@ -4,15 +4,38 @@ import { createAnonClient } from "@/lib/supabase/anon";
 
 type RouteContext = { params: Promise<{ token: string }> };
 
+function linkToken(raw: string) {
+  try {
+    return decodeURIComponent(raw).trim();
+  } catch {
+    return raw.trim();
+  }
+}
+
+function previewFirstName(data: unknown) {
+  const row = Array.isArray(data) ? data[0] : data;
+  if (typeof row === "string") {
+    return row.trim();
+  }
+  if (row && typeof row === "object") {
+    const record = row as Record<string, unknown>;
+    const value = record.first_name ?? record.firstName ?? record.split_part;
+    if (typeof value === "string") {
+      return value.trim();
+    }
+  }
+  return "";
+}
+
 export async function GET(_request: Request, context: RouteContext) {
-  const { token } = await context.params;
+  const token = linkToken((await context.params).token);
   if (!isLinkToken(token)) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
 
   const supabase = createAnonClient();
   const { data, error } = await supabase.rpc("family_request_preview", { p_token: token });
-  const firstName = Array.isArray(data) ? data[0]?.first_name : data?.first_name;
+  const firstName = previewFirstName(data);
 
   if (error || !firstName) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
@@ -22,7 +45,7 @@ export async function GET(_request: Request, context: RouteContext) {
 }
 
 export async function POST(request: Request, context: RouteContext) {
-  const { token } = await context.params;
+  const token = linkToken((await context.params).token);
   if (!isLinkToken(token)) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }

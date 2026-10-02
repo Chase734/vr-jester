@@ -88,7 +88,7 @@ type FacilityContextValue = FacilityState & {
   hydrated: boolean;
   isAdmin: boolean;
   selectFacility: (id: string) => void;
-  addResident: (name: string, room: string) => Resident;
+  addResident: (name: string, room: string) => Promise<Resident>;
   updateResident: (id: string, patch: Partial<Resident>) => void;
   addListItem: (id: string, key: ListKey, value: string) => void;
   removeListItem: (id: string, key: ListKey, value: string) => void;
@@ -291,10 +291,13 @@ export function FacilityProvider({ children }: { children: ReactNode }) {
       setState((current) => ({ ...current, selectedFacilityId: id }));
     };
 
-    const addResident = (name: string, room: string) => {
+    const addResident = async (name: string, room: string) => {
       const resident = { ...createBlankResident(name, room), facilityId };
       const row = residentToRow(resident, facilityId);
-      void supabase.from("residents").insert(row);
+      const { error } = await supabase.from("residents").insert(row);
+      if (error) {
+        throw error;
+      }
       setState((current) => ({
         ...current,
         residents: [resident, ...current.residents],
@@ -598,25 +601,27 @@ export function FacilityProvider({ children }: { children: ReactNode }) {
     };
 
     const ensureFamilyLink = async (residentId: string) => {
-      const existing = state.residents.find((resident) => resident.id === residentId);
-      if (existing?.familyLinkToken) {
-        return existing.familyLinkToken;
-      }
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("residents")
         .select("family_link_token")
         .eq("id", residentId)
         .maybeSingle();
+      if (error) {
+        throw error;
+      }
       let token = (data?.family_link_token as string | undefined) ?? "";
       if (!token) {
         token = crypto.randomUUID();
-        const { error } = await supabase
+        const { data: saved, error: saveError } = await supabase
           .from("residents")
           .update({ family_link_token: token })
-          .eq("id", residentId);
-        if (error) {
-          throw error;
+          .eq("id", residentId)
+          .select("family_link_token")
+          .maybeSingle();
+        if (saveError || !saved?.family_link_token) {
+          throw saveError ?? new Error("Could not save family link");
         }
+        token = saved.family_link_token as string;
       }
       setState((current) => ({
         ...current,

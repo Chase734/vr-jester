@@ -11,6 +11,8 @@ export default function NewResidentPage() {
   const { addResident } = useFacility();
   const [name, setName] = useState("");
   const [room, setRoom] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 sm:px-8">
@@ -22,13 +24,20 @@ export default function NewResidentPage() {
 
       <form
         className="mt-8 space-y-5"
-        onSubmit={(event) => {
+        onSubmit={async (event) => {
           event.preventDefault();
-          if (!name.trim()) {
+          if (!name.trim() || busy) {
             return;
           }
-          const resident = addResident(name, room);
-          router.push(`/residents/${resident.id}`);
+          setBusy(true);
+          setError("");
+          try {
+            const resident = await addResident(name, room);
+            router.push(`/residents/${resident.id}`);
+          } catch {
+            setBusy(false);
+            setError("Could not save this resident. Check the selected community and try again.");
+          }
         }}
       >
         <label className="block">
@@ -51,11 +60,13 @@ export default function NewResidentPage() {
             className={`${fieldClass} mt-1`}
           />
         </label>
+        {error ? <p className="text-lg text-red-800">{error}</p> : null}
         <button
           type="submit"
-          className="inline-flex min-h-20 w-full items-center justify-center rounded-2xl bg-navy px-8 text-3xl font-semibold text-white"
+          disabled={busy}
+          className="inline-flex min-h-20 w-full items-center justify-center rounded-2xl bg-navy px-8 text-3xl font-semibold text-white disabled:opacity-60"
         >
-          Create resident
+          {busy ? "Saving..." : "Create resident"}
         </button>
       </form>
     </div>
