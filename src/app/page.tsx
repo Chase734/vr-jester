@@ -1,12 +1,13 @@
 "use client";
 
+import { LogoutButton } from "@/components/logout-button";
 import { StartSessionButton } from "@/components/ui";
-import { experiences, facility } from "@/data/sample";
+import { experiences } from "@/data/sample";
 import { formatSessionWhen } from "@/lib/dates";
 import { useFacility } from "@/lib/facility-store";
 
 export default function DashboardPage() {
-  const { residents, sessions, familyRequests } = useFacility();
+  const { residents, sessions, familyRequests, profile } = useFacility();
   const needsVisit = residents.filter((resident) => resident.engagement === "Needs a visit").length;
   const weekStart = new Date("2026-09-28T00:00:00");
   const weekEnd = new Date("2026-10-04T23:59:59");
@@ -20,11 +21,16 @@ export default function DashboardPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-8">
       <header className="mb-8">
-        <p className="text-lg text-stone-600">VR Jester</p>
+        <div className="flex items-baseline justify-between gap-4">
+          <p className="text-lg text-stone-600">VR Jester</p>
+          <LogoutButton />
+        </div>
         <h1 className="mt-1 text-4xl font-semibold tracking-tight text-stone-900">
-          {facility.name}
+          {profile?.facilityName ?? "Maple Grove Senior Living"}
         </h1>
-        <p className="mt-2 text-xl text-stone-700">Hello, {facility.staffName}. Here is today.</p>
+        <p className="mt-2 text-xl text-stone-700">
+          Hello{profile?.fullName ? `, ${profile.fullName}` : ""}. Here is today.
+        </p>
       </header>
 
       <div className="mb-4">

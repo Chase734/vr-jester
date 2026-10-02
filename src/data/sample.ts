@@ -8,6 +8,7 @@ export type FamilyMember = {
 
 export type Resident = {
   id: string;
+  facilityId?: string;
   name: string;
   room: string;
   birthday: string;
@@ -399,6 +400,7 @@ export function getResident(id: string) {
 export function createBlankResident(name: string, room: string): Resident {
   return {
     id: `r-${Date.now()}`,
+    facilityId: undefined,
     name: name.trim(),
     room: room.trim() || "Room unassigned",
     birthday: "",

@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { experiences } from "@/data/sample";
+import { LogoutButton } from "@/components/logout-button";
 import { useFacility } from "@/lib/facility-store";
 
 function StartSessionForm() {
@@ -15,9 +16,12 @@ function StartSessionForm() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-8">
-      <a href="/" className="text-lg text-emerald-800 underline">
-        Back to dashboard
-      </a>
+      <div className="flex items-baseline justify-between gap-4">
+        <a href="/" className="text-lg text-emerald-800 underline">
+          Back to dashboard
+        </a>
+        <LogoutButton />
+      </div>
       <h1 className="mt-4 text-4xl font-semibold tracking-tight text-stone-900">Start Session</h1>
       <p className="mt-2 text-xl text-stone-700">
         Pick a resident, then a destination. Then open Wander on the headset.

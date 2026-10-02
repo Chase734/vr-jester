@@ -18,8 +18,18 @@ import {
   type Resident,
   type Session,
 } from "@/data/sample";
-
-const STORAGE_KEY = "vr-jester-facility-v1";
+import { MAPLE_GROVE_FACILITY_ID } from "@/lib/constants";
+import {
+  requestFromRow,
+  residentFromRow,
+  residentToRow,
+  sessionFromRow,
+  type RequestRow,
+  type ResidentRow,
+  type SessionRow,
+  type StaffProfile,
+} from "@/lib/db";
+import { createClient } from "@/lib/supabase/client";
 
 export type ListKey =
   | "placesLived"
@@ -32,7 +42,20 @@ export type ListKey =
   | "futureRequests"
   | "favoritePlaces";
 
+const listColumn: Record<ListKey, keyof ResidentRow> = {
+  placesLived: "places_lived",
+  placesVisited: "places_visited",
+  placesTheyWantToVisit: "places_they_want_to_visit",
+  favoriteSportsTeams: "favorite_sports_teams",
+  interests: "interests",
+  favoriteExperiences: "favorite_experiences",
+  pastExperiences: "past_experiences",
+  futureRequests: "future_requests",
+  favoritePlaces: "favorite_places",
+};
+
 type FacilityState = {
+  profile: StaffProfile | null;
   residents: Resident[];
   sessions: Session[];
   familyRequests: FamilyRequest[];
@@ -52,67 +75,130 @@ type FacilityContextValue = FacilityState & {
 
 const FacilityContext = createContext<FacilityContextValue | null>(null);
 
-const seed: FacilityState = {
-  residents: seedResidents,
-  sessions: seedSessions,
-  familyRequests: seedRequests,
+const empty: FacilityState = {
+  profile: null,
+  residents: [],
+  sessions: [],
+  familyRequests: [],
 };
 
-function normalizeResident(resident: Resident): Resident {
-  return {
-    ...resident,
-    placesLived: resident.placesLived ?? [],
-    placesVisited: resident.placesVisited ?? [],
-    placesTheyWantToVisit: resident.placesTheyWantToVisit ?? [],
-    favoriteSportsTeams: resident.favoriteSportsTeams ?? [],
-    favoritePlaces: resident.favoritePlaces ?? [],
-    interests: resident.interests ?? [],
-    familyMembers: resident.familyMembers ?? [],
-    favoriteExperiences: resident.favoriteExperiences ?? [],
-    pastExperiences: resident.pastExperiences ?? [],
-    futureRequests: resident.futureRequests ?? [],
-  };
-}
-
-function loadState(): FacilityState {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      return seed;
-    }
-    const parsed = JSON.parse(raw) as FacilityState;
-    if (!parsed.residents?.length) {
-      return seed;
-    }
-    return {
-      residents: parsed.residents.map(normalizeResident),
-      sessions: parsed.sessions ?? seedSessions,
-      familyRequests: parsed.familyRequests ?? seedRequests,
-    };
-  } catch {
-    return seed;
+function writeFacilityId(profile: StaffProfile | null) {
+  if (profile?.role === "staff" && profile.facilityId) {
+    return profile.facilityId;
   }
+  return MAPLE_GROVE_FACILITY_ID;
 }
 
 export function FacilityProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<FacilityState>(seed);
+  const [state, setState] = useState<FacilityState>(empty);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    setState(loadState());
-    setHydrated(true);
+    const supabase = createClient();
+    let cancelled = false;
+
+    async function load() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user || cancelled) {
+        setState(empty);
+        setHydrated(true);
+        return;
+      }
+
+      const { data: profileRow } = await supabase
+        .from("profiles")
+        .select("id, role, full_name, facility_id, facilities ( name )")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      const facilityJoin = profileRow?.facilities as { name: string } | { name: string }[] | null;
+      const facilityName = Array.isArray(facilityJoin)
+        ? facilityJoin[0]?.name
+        : facilityJoin?.name;
+
+      const profile: StaffProfile | null = profileRow
+        ? {
+            id: profileRow.id as string,
+            role: profileRow.role as StaffProfile["role"],
+            fullName: (profileRow.full_name as string) || "",
+            facilityId: (profileRow.facility_id as string | null) ?? null,
+            facilityName:
+              (profileRow.role as string) === "admin"
+                ? facilityName || "All facilities"
+                : facilityName || "Your facility",
+          }
+        : null;
+
+      if (profile && (profile.role === "admin" || profile.facilityId === MAPLE_GROVE_FACILITY_ID)) {
+        const { count } = await supabase
+          .from("residents")
+          .select("id", { count: "exact", head: true })
+          .eq("facility_id", MAPLE_GROVE_FACILITY_ID);
+        if (!count) {
+          await supabase
+            .from("residents")
+            .insert(seedResidents.map((resident) => residentToRow(resident, MAPLE_GROVE_FACILITY_ID)));
+          await supabase.from("sessions").insert(
+            seedSessions.map((session) => ({
+              id: session.id,
+              facility_id: MAPLE_GROVE_FACILITY_ID,
+              resident_id: session.residentId,
+              resident_name: session.residentName,
+              experience: session.experience,
+              starts_at: session.startsAt,
+              status: session.status,
+            })),
+          );
+          await supabase.from("family_requests").insert(
+            seedRequests.map((request) => ({
+              id: request.id,
+              facility_id: MAPLE_GROVE_FACILITY_ID,
+              resident_id: request.residentId,
+              resident_name: request.residentName,
+              requested_by: request.requestedBy,
+              experience: request.experience,
+              note: request.note,
+              received: request.received,
+            })),
+          );
+        }
+      }
+
+      const [{ data: residentRows }, { data: sessionRows }, { data: requestRows }] = await Promise.all([
+        supabase.from("residents").select("*").order("name"),
+        supabase.from("sessions").select("*").order("starts_at", { ascending: false }),
+        supabase.from("family_requests").select("*"),
+      ]);
+
+      if (cancelled) {
+        return;
+      }
+
+      setState({
+        profile,
+        residents: ((residentRows ?? []) as ResidentRow[]).map(residentFromRow),
+        sessions: ((sessionRows ?? []) as SessionRow[]).map(sessionFromRow),
+        familyRequests: ((requestRows ?? []) as RequestRow[]).map(requestFromRow),
+      });
+      setHydrated(true);
+    }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  useEffect(() => {
-    if (!hydrated) {
-      return;
-    }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [hydrated, state]);
-
   const value = useMemo<FacilityContextValue>(() => {
+    const supabase = createClient();
+    const facilityId = writeFacilityId(state.profile);
+
     const addResident = (name: string, room: string) => {
-      const resident = createBlankResident(name, room);
+      const resident = { ...createBlankResident(name, room), facilityId };
+      const row = residentToRow(resident, facilityId);
+      void supabase.from("residents").insert(row);
       setState((current) => ({
         ...current,
         residents: [resident, ...current.residents],
@@ -121,12 +207,16 @@ export function FacilityProvider({ children }: { children: ReactNode }) {
     };
 
     const updateResident = (id: string, patch: Partial<Resident>) => {
-      setState((current) => ({
-        ...current,
-        residents: current.residents.map((resident) =>
+      setState((current) => {
+        const next = current.residents.map((resident) =>
           resident.id === id ? { ...resident, ...patch } : resident,
-        ),
-      }));
+        );
+        const updated = next.find((resident) => resident.id === id);
+        if (updated) {
+          void supabase.from("residents").update(residentToRow(updated, facilityId)).eq("id", id);
+        }
+        return { ...current, residents: next };
+      });
     };
 
     const addListItem = (id: string, key: ListKey, value: string) => {
@@ -134,58 +224,82 @@ export function FacilityProvider({ children }: { children: ReactNode }) {
       if (!item) {
         return;
       }
-      setState((current) => ({
-        ...current,
-        residents: current.residents.map((resident) => {
-          if (resident.id !== id) {
+      setState((current) => {
+        const next = current.residents.map((resident) => {
+          if (resident.id !== id || resident[key].includes(item)) {
             return resident;
           }
-          const list = resident[key];
-          if (list.includes(item)) {
-            return resident;
-          }
-          return { ...resident, [key]: [...list, item] };
-        }),
-      }));
+          return { ...resident, [key]: [...resident[key], item] };
+        });
+        const updated = next.find((resident) => resident.id === id);
+        if (updated) {
+          void supabase
+            .from("residents")
+            .update({ [listColumn[key]]: updated[key] })
+            .eq("id", id);
+        }
+        return { ...current, residents: next };
+      });
     };
 
     const removeListItem = (id: string, key: ListKey, value: string) => {
-      setState((current) => ({
-        ...current,
-        residents: current.residents.map((resident) =>
+      setState((current) => {
+        const next = current.residents.map((resident) =>
           resident.id === id
             ? { ...resident, [key]: resident[key].filter((item) => item !== value) }
             : resident,
-        ),
-      }));
+        );
+        const updated = next.find((resident) => resident.id === id);
+        if (updated) {
+          void supabase
+            .from("residents")
+            .update({ [listColumn[key]]: updated[key] })
+            .eq("id", id);
+        }
+        return { ...current, residents: next };
+      });
     };
 
     const addFamilyMember = (id: string, member: FamilyMember) => {
       if (!member.name.trim()) {
         return;
       }
-      setState((current) => ({
-        ...current,
-        residents: current.residents.map((resident) =>
+      setState((current) => {
+        const next = current.residents.map((resident) =>
           resident.id === id
             ? { ...resident, familyMembers: [...resident.familyMembers, member] }
             : resident,
-        ),
-      }));
+        );
+        const updated = next.find((resident) => resident.id === id);
+        if (updated) {
+          void supabase
+            .from("residents")
+            .update({ family_members: updated.familyMembers })
+            .eq("id", id);
+        }
+        return { ...current, residents: next };
+      });
     };
 
     const removeFamilyMember = (id: string, name: string) => {
-      setState((current) => ({
-        ...current,
-        residents: current.residents.map((resident) =>
+      setState((current) => {
+        const next = current.residents.map((resident) =>
           resident.id === id
             ? {
                 ...resident,
                 familyMembers: resident.familyMembers.filter((member) => member.name !== name),
               }
             : resident,
-        ),
-      }));
+        );
+        const updated = next.find((resident) => resident.id === id);
+        if (updated) {
+          void supabase
+            .from("residents")
+            .update({ family_members: updated.familyMembers })
+            .eq("id", id);
+        }
+        return { ...current, residents: next };
+      });
     };
 
     const logSession = (residentId: string, experience: string) => {
@@ -198,14 +312,35 @@ export function FacilityProvider({ children }: { children: ReactNode }) {
         if (!resident) {
           return current;
         }
+        const sessionFacilityId = resident.facilityId || facilityId;
         const session: Session = {
-          id: `s-${Date.now()}`,
+          id: `s-${crypto.randomUUID()}`,
           residentId,
           residentName: resident.name,
           experience: destination,
           startsAt: new Date().toISOString(),
           status: "completed",
         };
+        void supabase.from("sessions").insert({
+          id: session.id,
+          facility_id: sessionFacilityId,
+          resident_id: residentId,
+          resident_name: resident.name,
+          experience: destination,
+          starts_at: session.startsAt,
+          status: "completed",
+        });
+        const pastExperiences = resident.pastExperiences.includes(destination)
+          ? resident.pastExperiences
+          : [...resident.pastExperiences, destination];
+        void supabase
+          .from("residents")
+          .update({
+            sessions_this_month: resident.sessionsThisMonth + 1,
+            past_experiences: pastExperiences,
+            engagement: "Doing well",
+          })
+          .eq("id", residentId);
         return {
           ...current,
           sessions: [session, ...current.sessions],
@@ -214,9 +349,7 @@ export function FacilityProvider({ children }: { children: ReactNode }) {
               ? {
                   ...item,
                   sessionsThisMonth: item.sessionsThisMonth + 1,
-                  pastExperiences: item.pastExperiences.includes(destination)
-                    ? item.pastExperiences
-                    : [...item.pastExperiences, destination],
+                  pastExperiences,
                   engagement: "Doing well",
                 }
               : item,
@@ -241,7 +374,7 @@ export function FacilityProvider({ children }: { children: ReactNode }) {
           return current;
         }
         const request: FamilyRequest = {
-          id: `f-${Date.now()}`,
+          id: `f-${crypto.randomUUID()}`,
           residentId,
           residentName: resident.name,
           requestedBy: requestedBy.trim() || "Staff",
@@ -249,20 +382,36 @@ export function FacilityProvider({ children }: { children: ReactNode }) {
           note: note.trim(),
           received: "Just now",
         };
+        const futureRequests = resident.futureRequests.includes(destination)
+          ? resident.futureRequests
+          : [...resident.futureRequests, destination];
+        const placesTheyWantToVisit = resident.placesTheyWantToVisit.includes(destination)
+          ? resident.placesTheyWantToVisit
+          : [...resident.placesTheyWantToVisit, destination];
+        void supabase.from("family_requests").insert({
+          id: request.id,
+          facility_id: resident.facilityId || facilityId,
+          resident_id: residentId,
+          resident_name: resident.name,
+          requested_by: request.requestedBy,
+          experience: destination,
+          note: request.note,
+          received: request.received,
+        });
+        void supabase
+          .from("residents")
+          .update({
+            future_requests: futureRequests,
+            places_they_want_to_visit: placesTheyWantToVisit,
+          })
+          .eq("id", residentId);
         return {
           familyRequests: [request, ...current.familyRequests],
           sessions: current.sessions,
+          profile: current.profile,
           residents: current.residents.map((item) =>
             item.id === residentId
-              ? {
-                  ...item,
-                  futureRequests: item.futureRequests.includes(destination)
-                    ? item.futureRequests
-                    : [...item.futureRequests, destination],
-                  placesTheyWantToVisit: item.placesTheyWantToVisit.includes(destination)
-                    ? item.placesTheyWantToVisit
-                    : [...item.placesTheyWantToVisit, destination],
-                }
+              ? { ...item, futureRequests, placesTheyWantToVisit }
               : item,
           ),
         };

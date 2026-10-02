@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ChipList, QuickAdd, SectionLabel, fieldClass } from "@/components/quick-add";
+import { LogoutButton } from "@/components/logout-button";
 import { StartSessionButton } from "@/components/ui";
 import {
   experiences,
@@ -76,9 +77,12 @@ export function ResidentWorkspace({ residentId }: { residentId: string }) {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-8">
-      <a href="/" className="text-lg text-emerald-800 underline">
-        Back to dashboard
-      </a>
+      <div className="flex items-baseline justify-between gap-4">
+        <a href="/" className="text-lg text-emerald-800 underline">
+          Back to dashboard
+        </a>
+        <LogoutButton />
+      </div>
 
       <header className="mt-4 mb-5">
         <p className="text-lg text-stone-600">{resident.room}</p>
