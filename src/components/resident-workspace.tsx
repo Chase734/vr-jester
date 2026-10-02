@@ -15,7 +15,7 @@ import { formatBirthday, formatSessionWhen } from "@/lib/dates";
 import { useFacility, type ListKey } from "@/lib/facility-store";
 
 const tabs = [
-  "Profile",
+  "Life Story",
   "Interests",
   "Travel History",
   "VR Sessions",
@@ -47,7 +47,7 @@ export function ResidentWorkspace({ residentId }: { residentId: string }) {
     logSession,
     addRequest,
   } = useFacility();
-  const [tab, setTab] = useState<Tab>("Profile");
+  const [tab, setTab] = useState<Tab>("Life Story");
   const [familyName, setFamilyName] = useState("");
   const [familyRelation, setFamilyRelation] = useState("");
   const [sessionPlace, setSessionPlace] = useState("");
@@ -113,7 +113,7 @@ export function ResidentWorkspace({ residentId }: { residentId: string }) {
       </div>
 
       <div className="rounded-2xl border border-stone-300 bg-white p-6">
-        {tab === "Profile" ? (
+        {tab === "Life Story" ? (
           <ProfileTab
             resident={resident}
             familyName={familyName}
@@ -391,7 +391,7 @@ function StorySection({
   return (
     <details
       open={open}
-      className="rounded-2xl border border-stone-300 bg-stone-50 p-4"
+      className="rounded-2xl border-2 border-navy/20 bg-stone-50 p-4"
     >
       <summary className="cursor-pointer text-2xl font-semibold text-navy">
         {title}
@@ -453,8 +453,9 @@ function ProfileTab({
 }) {
   return (
     <div className="space-y-4">
+      <p className="text-2xl font-semibold text-navy">Life story</p>
       <p className="text-lg text-stone-600">
-        Life story. Fill in what you know. Everything is optional.
+        Tap a section below to open it. Fill in what you know. Everything is optional.
       </p>
 
       <StorySection title="Basics" open>
@@ -515,7 +516,7 @@ function ProfileTab({
         </fieldset>
       </StorySection>
 
-      <StorySection title="Places that matter">
+      <StorySection title="Places that matter" open>
         <StoryList
           residentId={resident.id}
           listKey="placesLived"
