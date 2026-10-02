@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChipList, QuickAdd, SectionLabel, fieldClass } from "@/components/quick-add";
 import { AppBar } from "@/components/brand";
+import { emptySessionLog, SessionLogFields } from "@/components/session-log-form";
 import { StartSessionButton } from "@/components/ui";
 import {
   experiences,
@@ -13,6 +14,7 @@ import {
 } from "@/data/sample";
 import { formatBirthday, formatSessionWhen, formatSubmittedAt } from "@/lib/dates";
 import { useFacility, type ListKey } from "@/lib/facility-store";
+import { buildResidentInsights, waitingFamilyRequests } from "@/lib/insights";
 
 const tabs = [
   "Life Story",
@@ -52,7 +54,7 @@ export function ResidentWorkspace({ residentId }: { residentId: string }) {
   const [tab, setTab] = useState<Tab>("Life Story");
   const [familyName, setFamilyName] = useState("");
   const [familyRelation, setFamilyRelation] = useState("");
-  const [sessionPlace, setSessionPlace] = useState("");
+  const [sessionLog, setSessionLog] = useState(emptySessionLog());
   const [requestPlace, setRequestPlace] = useState("");
   const [requestFrom, setRequestFrom] = useState("");
   const [linkMessage, setLinkMessage] = useState("");
@@ -74,8 +76,12 @@ export function ResidentWorkspace({ residentId }: { residentId: string }) {
     );
   }
 
-  const residentSessions = sessions.filter((session) => session.residentId === resident.id);
+  const residentSessions = sessions
+    .filter((session) => session.residentId === resident.id)
+    .sort((left, right) => new Date(right.startsAt).getTime() - new Date(left.startsAt).getTime());
   const residentRequests = familyRequests.filter((request) => request.residentId === resident.id);
+  const waitingRequests = waitingFamilyRequests(residentRequests);
+  const insights = buildResidentInsights(resident, residentSessions, residentRequests);
   const destinations = experiences.map((item) => item.name);
 
   return (
@@ -112,6 +118,35 @@ export function ResidentWorkspace({ residentId }: { residentId: string }) {
         Copy Family Link
       </button>
       {linkMessage ? <p className="mb-6 text-lg text-navy">{linkMessage}</p> : null}
+
+      <section className="mb-6 rounded-2xl border-2 border-gold bg-white p-5">
+        <h2 className="text-2xl font-semibold text-navy">Resident Insights</h2>
+        <p className="mt-1 text-lg text-stone-600">From what staff and family have already recorded.</p>
+        <div className="mt-4 space-y-3 text-lg">
+          <p>
+            <span className="font-medium">Favorite experiences: </span>
+            {insights.favorites.length ? insights.favorites.join(", ") : "None marked yet."}
+          </p>
+          <p>
+            <span className="font-medium">Interests: </span>
+            {insights.interests.length ? insights.interests.join(", ") : "None recorded yet."}
+          </p>
+          <p>
+            <span className="font-medium">Most visited destinations: </span>
+            {insights.mostVisited.length ? insights.mostVisited.join(", ") : "No trips yet."}
+          </p>
+          <p>
+            <span className="font-medium">Recent experiences: </span>
+            {insights.recent.length ? insights.recent.join(", ") : "No trips yet."}
+          </p>
+          <p>
+            <span className="font-medium">Family requests waiting: </span>
+            {insights.waiting.length
+              ? insights.waiting.map((request) => request.experience).join(", ")
+              : "None waiting."}
+          </p>
+        </div>
+      </section>
 
       <div className="mb-6 flex flex-wrap gap-2" role="tablist" aria-label="Resident sections">
         {tabs.map((item) => (
@@ -233,39 +268,45 @@ export function ResidentWorkspace({ residentId }: { residentId: string }) {
         {tab === "VR Sessions" ? (
           <div className="space-y-6">
             <SectionLabel>Log a trip they just took</SectionLabel>
-            <form
-              className="flex flex-col gap-3 sm:flex-row"
-              onSubmit={(event) => {
-                event.preventDefault();
-                logSession(resident.id, sessionPlace);
-                setSessionPlace("");
-              }}
-            >
-              <input
-                value={sessionPlace}
-                onChange={(event) => setSessionPlace(event.target.value)}
-                placeholder="Where did they go?"
-                className={fieldClass}
-              />
-              <button
-                type="submit"
-                className="min-h-14 rounded-xl bg-navy px-5 text-xl font-semibold text-white"
-              >
-                Log trip
-              </button>
-            </form>
+            <input
+              value={sessionLog.experience}
+              onChange={(event) =>
+                setSessionLog((current) => ({ ...current, experience: event.target.value }))
+              }
+              placeholder="Where did they go?"
+              className={fieldClass}
+            />
             <div className="flex flex-wrap gap-2">
               {destinations.map((place) => (
                 <button
                   key={place}
                   type="button"
-                  onClick={() => logSession(resident.id, place)}
+                  onClick={() => setSessionLog((current) => ({ ...current, experience: place }))}
                   className="rounded-full border border-stone-300 bg-stone-50 px-4 py-2 text-lg"
                 >
                   {place}
                 </button>
               ))}
             </div>
+            <SessionLogFields
+              values={sessionLog}
+              waitingRequests={waitingRequests}
+              onChange={(patch) => setSessionLog((current) => ({ ...current, ...patch }))}
+            />
+            <button
+              type="button"
+              disabled={!sessionLog.experience.trim() || !sessionLog.reaction || !sessionLog.sessionEngagement}
+              className="inline-flex min-h-14 w-full items-center justify-center rounded-xl bg-navy px-5 text-xl font-semibold text-white disabled:opacity-60"
+              onClick={() => {
+                logSession(resident.id, {
+                  ...sessionLog,
+                  requestId: sessionLog.requestId || null,
+                });
+                setSessionLog(emptySessionLog());
+              }}
+            >
+              Save session
+            </button>
             <div>
               <SectionLabel>Session history</SectionLabel>
               {residentSessions.length === 0 ? (
@@ -273,12 +314,27 @@ export function ResidentWorkspace({ residentId }: { residentId: string }) {
               ) : (
                 <ul className="mt-3 divide-y divide-stone-200">
                   {residentSessions.map((session) => (
-                    <li key={session.id} className="py-3">
+                    <li key={session.id} className="py-4">
                       <p className="text-xl font-medium">{session.experience}</p>
                       <p className="text-lg text-stone-600">
                         {formatSessionWhen(session.startsAt)}
-                        {session.status === "completed" ? " — Done" : ""}
+                        {session.durationMinutes ? ` · ${session.durationMinutes} min` : ""}
                       </p>
+                      <p className="text-lg text-stone-700">
+                        {session.reaction || "Reaction not recorded"}
+                        {session.sessionEngagement ? ` · ${session.sessionEngagement}` : ""}
+                      </p>
+                      {session.sessionNotes ? (
+                        <p className="mt-1 text-lg text-stone-700">{session.sessionNotes}</p>
+                      ) : null}
+                      {session.memoryDiscovered ? (
+                        <p className="text-lg text-stone-700">Memory: {session.memoryDiscovered}</p>
+                      ) : null}
+                      {session.followUpDestination ? (
+                        <p className="text-lg text-stone-700">
+                          Next idea: {session.followUpDestination}
+                        </p>
+                      ) : null}
                     </li>
                   ))}
                 </ul>
@@ -307,6 +363,9 @@ export function ResidentWorkspace({ residentId }: { residentId: string }) {
             </div>
             <div>
               <SectionLabel>Favorite VR experiences</SectionLabel>
+              <p className="mt-1 text-lg text-stone-600">
+                Destinations marked Loved It are added here automatically.
+              </p>
               <QuickAdd
                 residentId={resident.id}
                 listKey="favoriteExperiences"

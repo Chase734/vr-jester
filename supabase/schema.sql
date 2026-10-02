@@ -65,7 +65,14 @@ create table if not exists public.sessions (
   resident_name text not null,
   experience text not null,
   starts_at timestamptz not null,
-  status text not null check (status in ('upcoming', 'completed'))
+  status text not null check (status in ('upcoming', 'completed')),
+  duration_minutes integer not null default 0,
+  reaction text not null default '',
+  session_engagement text not null default '',
+  staff_notes text not null default '',
+  memory_discovered text not null default '',
+  follow_up_destination text not null default '',
+  request_id text
 );
 
 create table if not exists public.family_requests (

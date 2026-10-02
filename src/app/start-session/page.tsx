@@ -1,25 +1,32 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useMemo, useState } from "react";
 import { experiences } from "@/data/sample";
 import { AppBar } from "@/components/brand";
+import { emptySessionLog, SessionLogFields } from "@/components/session-log-form";
+import { waitingFamilyRequests } from "@/lib/insights";
 import { useFacility } from "@/lib/facility-store";
 
 function StartSessionForm() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const { residents } = useFacility();
+  const { residents, familyRequests, logSession } = useFacility();
   const [residentId, setResidentId] = useState<string | null>(searchParams.get("resident"));
-  const [experience, setExperience] = useState<string | null>(null);
+  const [log, setLog] = useState(emptySessionLog());
 
   const resident = residents.find((item) => item.id === residentId);
+  const waiting = useMemo(
+    () => waitingFamilyRequests(familyRequests.filter((request) => request.residentId === residentId)),
+    [familyRequests, residentId],
+  );
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-8">
       <AppBar backHref="/" />
       <h1 className="text-4xl font-semibold tracking-tight text-navy">Start Session</h1>
       <p className="mt-2 text-xl text-stone-700">
-        Pick a resident, then a destination. Then open Wander on the headset.
+        Pick a resident and a destination. After Wander, tap how it went.
       </p>
 
       <section className="mt-8">
@@ -50,9 +57,9 @@ function StartSessionForm() {
             <button
               key={item.name}
               type="button"
-              onClick={() => setExperience(item.name)}
+              onClick={() => setLog((current) => ({ ...current, experience: item.name }))}
               className={
-                experience === item.name
+                log.experience === item.name
                   ? "min-h-16 rounded-xl bg-navy px-4 text-left text-xl font-medium text-white"
                   : "min-h-16 rounded-xl border border-stone-300 bg-white px-4 text-left text-xl text-stone-900 hover:bg-stone-50"
               }
@@ -61,17 +68,45 @@ function StartSessionForm() {
             </button>
           ))}
         </div>
+        <input
+          value={log.experience}
+          onChange={(event) => setLog((current) => ({ ...current, experience: event.target.value }))}
+          placeholder="Or type a destination"
+          className="mt-3 w-full min-h-14 rounded-xl border border-stone-300 bg-white px-4 text-xl"
+        />
       </section>
 
-      {resident && experience ? (
-        <div className="mt-10 rounded-2xl border-2 border-gold bg-white p-6">
-          <p className="text-2xl font-semibold text-stone-900">Ready</p>
-          <p className="mt-2 text-xl text-stone-800">
-            {resident.name} is going to {experience}.
-          </p>
-          <p className="mt-3 text-lg text-stone-700">
-            Put on the Quest headset and start this destination in Wander.
-          </p>
+      {resident && log.experience.trim() ? (
+        <div className="mt-10 space-y-6 rounded-2xl border-2 border-gold bg-white p-6">
+          <div>
+            <p className="text-2xl font-semibold text-stone-900">Ready, then wrap up</p>
+            <p className="mt-2 text-xl text-stone-800">
+              {resident.name} is going to {log.experience}. Start this destination in Wander, then
+              tap how it went.
+            </p>
+          </div>
+          <SessionLogFields
+            values={log}
+            waitingRequests={waiting}
+            onChange={(patch) => setLog((current) => ({ ...current, ...patch }))}
+          />
+          <button
+            type="button"
+            disabled={!log.reaction || !log.sessionEngagement}
+            className="inline-flex min-h-16 w-full items-center justify-center rounded-2xl bg-navy px-8 text-2xl font-semibold text-white disabled:opacity-60"
+            onClick={() => {
+              logSession(resident.id, {
+                ...log,
+                requestId: log.requestId || null,
+              });
+              router.push(`/residents/${resident.id}`);
+            }}
+          >
+            Save session
+          </button>
+          {!log.reaction || !log.sessionEngagement ? (
+            <p className="text-lg text-stone-600">Choose a reaction and engagement to save.</p>
+          ) : null}
         </div>
       ) : (
         <p className="mt-10 text-xl text-stone-600">Choose a resident and a destination above.</p>

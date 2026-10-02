@@ -94,7 +94,19 @@ type FacilityContextValue = FacilityState & {
   removeListItem: (id: string, key: ListKey, value: string) => void;
   addFamilyMember: (id: string, member: FamilyMember) => void;
   removeFamilyMember: (id: string, name: string) => void;
-  logSession: (residentId: string, experience: string) => void;
+  logSession: (
+    residentId: string,
+    details: {
+      experience: string;
+      durationMinutes?: number;
+      reaction?: Session["reaction"];
+      sessionEngagement?: Session["sessionEngagement"];
+      sessionNotes?: string;
+      memoryDiscovered?: string;
+      followUpDestination?: string;
+      requestId?: string | null;
+    },
+  ) => void;
   addRequest: (residentId: string, experience: string, requestedBy: string, note: string) => void;
   updateRequest: (
     id: string,
@@ -386,8 +398,20 @@ export function FacilityProvider({ children }: { children: ReactNode }) {
       });
     };
 
-    const logSession = (residentId: string, experience: string) => {
-      const destination = experience.trim();
+    const logSession = (
+      residentId: string,
+      details: {
+        experience: string;
+        durationMinutes?: number;
+        reaction?: Session["reaction"];
+        sessionEngagement?: Session["sessionEngagement"];
+        sessionNotes?: string;
+        memoryDiscovered?: string;
+        followUpDestination?: string;
+        requestId?: string | null;
+      },
+    ) => {
+      const destination = details.experience.trim();
       if (!destination) {
         return;
       }
@@ -397,6 +421,7 @@ export function FacilityProvider({ children }: { children: ReactNode }) {
           return current;
         }
         const sessionFacilityId = resident.facilityId || facilityId;
+        const requestId = details.requestId || null;
         const session: Session = {
           id: `s-${crypto.randomUUID()}`,
           facilityId: sessionFacilityId,
@@ -405,6 +430,13 @@ export function FacilityProvider({ children }: { children: ReactNode }) {
           experience: destination,
           startsAt: new Date().toISOString(),
           status: "completed",
+          durationMinutes: details.durationMinutes ?? 0,
+          reaction: details.reaction ?? "",
+          sessionEngagement: details.sessionEngagement ?? "",
+          sessionNotes: details.sessionNotes?.trim() ?? "",
+          memoryDiscovered: details.memoryDiscovered?.trim() ?? "",
+          followUpDestination: details.followUpDestination?.trim() ?? "",
+          requestId,
         };
         void supabase.from("sessions").insert({
           id: session.id,
@@ -414,27 +446,60 @@ export function FacilityProvider({ children }: { children: ReactNode }) {
           experience: destination,
           starts_at: session.startsAt,
           status: "completed",
+          duration_minutes: session.durationMinutes,
+          reaction: session.reaction,
+          session_engagement: session.sessionEngagement,
+          staff_notes: session.sessionNotes,
+          memory_discovered: session.memoryDiscovered,
+          follow_up_destination: session.followUpDestination,
+          request_id: requestId,
         });
         const pastExperiences = resident.pastExperiences.includes(destination)
           ? resident.pastExperiences
           : [...resident.pastExperiences, destination];
+        const favoriteExperiences =
+          session.reaction === "Loved It" && !resident.favoriteExperiences.includes(destination)
+            ? [...resident.favoriteExperiences, destination]
+            : resident.favoriteExperiences;
+        const followUp = session.followUpDestination;
+        const placesTheyWantToVisit =
+          followUp && !resident.placesTheyWantToVisit.includes(followUp)
+            ? [...resident.placesTheyWantToVisit, followUp]
+            : resident.placesTheyWantToVisit;
         void supabase
           .from("residents")
           .update({
             sessions_this_month: resident.sessionsThisMonth + 1,
             past_experiences: pastExperiences,
+            favorite_experiences: favoriteExperiences,
+            places_they_want_to_visit: placesTheyWantToVisit,
             engagement: "Doing well",
           })
           .eq("id", residentId);
+        let familyRequests = current.familyRequests;
+        if (requestId) {
+          familyRequests = current.familyRequests.map((request) =>
+            request.id === requestId
+              ? { ...request, status: "Completed" as const, sessionId: session.id }
+              : request,
+          );
+          void supabase
+            .from("family_requests")
+            .update({ status: "Completed", session_id: session.id })
+            .eq("id", requestId);
+        }
         return {
           ...current,
           sessions: [session, ...current.sessions],
+          familyRequests,
           residents: current.residents.map((item) =>
             item.id === residentId
               ? {
                   ...item,
                   sessionsThisMonth: item.sessionsThisMonth + 1,
                   pastExperiences,
+                  favoriteExperiences,
+                  placesTheyWantToVisit,
                   engagement: "Doing well",
                 }
               : item,

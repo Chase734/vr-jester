@@ -153,6 +153,13 @@ export type SessionRow = {
   experience: string;
   starts_at: string;
   status: Session["status"];
+  duration_minutes?: number;
+  reaction?: Session["reaction"];
+  session_engagement?: Session["sessionEngagement"];
+  staff_notes?: string;
+  memory_discovered?: string;
+  follow_up_destination?: string;
+  request_id?: string | null;
 };
 
 export function sessionFromRow(row: SessionRow): Session {
@@ -164,6 +171,13 @@ export function sessionFromRow(row: SessionRow): Session {
     experience: row.experience,
     startsAt: row.starts_at,
     status: row.status,
+    durationMinutes: row.duration_minutes ?? 0,
+    reaction: row.reaction ?? "",
+    sessionEngagement: row.session_engagement ?? "",
+    sessionNotes: row.staff_notes ?? "",
+    memoryDiscovered: row.memory_discovered ?? "",
+    followUpDestination: row.follow_up_destination ?? "",
+    requestId: row.request_id ?? null,
   };
 }
 

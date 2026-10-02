@@ -49,6 +49,9 @@ export type Resident = {
   engagement: "Needs a visit" | "Doing well" | "Very active";
 };
 
+export type SessionReaction = "Loved It" | "Liked It" | "Neutral" | "Didn't Like It";
+export type SessionEngagement = "Highly Engaged" | "Engaged" | "Limited Engagement" | "Disengaged";
+
 export type Session = {
   id: string;
   facilityId?: string;
@@ -57,7 +60,28 @@ export type Session = {
   experience: string;
   startsAt: string;
   status: "upcoming" | "completed";
+  durationMinutes: number;
+  reaction: SessionReaction | "";
+  sessionEngagement: SessionEngagement | "";
+  sessionNotes: string;
+  memoryDiscovered: string;
+  followUpDestination: string;
+  requestId: string | null;
 };
+
+export const sessionReactions: SessionReaction[] = [
+  "Loved It",
+  "Liked It",
+  "Neutral",
+  "Didn't Like It",
+];
+
+export const sessionEngagements: SessionEngagement[] = [
+  "Highly Engaged",
+  "Engaged",
+  "Limited Engagement",
+  "Disengaged",
+];
 
 export type RequestStatus = "New" | "Approved" | "Completed" | "Declined";
 
@@ -334,14 +358,17 @@ export const experiences = [
   { name: "Hawaii beaches", trips: 3 },
 ];
 
-export const sessions: Session[] = [
+const mapleGroveSessions = [
   {
     id: "s1",
     residentId: "r1",
     residentName: "Helen Park",
     experience: "Paris, France",
     startsAt: "2026-09-28T10:00:00",
-    status: "completed",
+    status: "completed" as const,
+    durationMinutes: 15,
+    reaction: "Loved It" as const,
+    sessionEngagement: "Highly Engaged" as const,
   },
   {
     id: "s2",
@@ -349,7 +376,7 @@ export const sessions: Session[] = [
     residentName: "Robert Chen",
     experience: "Grand Canyon",
     startsAt: "2026-09-30T14:00:00",
-    status: "completed",
+    status: "completed" as const,
   },
   {
     id: "s3",
@@ -357,7 +384,7 @@ export const sessions: Session[] = [
     residentName: "Dorothy Miles",
     experience: "Venice, Italy",
     startsAt: "2026-10-01T11:00:00",
-    status: "completed",
+    status: "completed" as const,
   },
   {
     id: "s4",
@@ -365,7 +392,7 @@ export const sessions: Session[] = [
     residentName: "Ruth Bennett",
     experience: "Hawaii beaches",
     startsAt: "2026-10-01T15:30:00",
-    status: "completed",
+    status: "completed" as const,
   },
   {
     id: "s5",
@@ -373,7 +400,7 @@ export const sessions: Session[] = [
     residentName: "Margaret Ellis",
     experience: "Rome, Italy",
     startsAt: "2026-10-02T10:00:00",
-    status: "upcoming",
+    status: "upcoming" as const,
   },
   {
     id: "s6",
@@ -381,7 +408,7 @@ export const sessions: Session[] = [
     residentName: "James Walsh",
     experience: "Tokyo, Japan",
     startsAt: "2026-10-02T14:00:00",
-    status: "upcoming",
+    status: "upcoming" as const,
   },
   {
     id: "s7",
@@ -389,7 +416,7 @@ export const sessions: Session[] = [
     residentName: "Alice Nguyen",
     experience: "Paris, France",
     startsAt: "2026-10-03T10:30:00",
-    status: "upcoming",
+    status: "upcoming" as const,
   },
   {
     id: "s8",
@@ -397,9 +424,20 @@ export const sessions: Session[] = [
     residentName: "Frank Ortega",
     experience: "Grand Canyon",
     startsAt: "2026-10-04T13:00:00",
-    status: "upcoming",
+    status: "upcoming" as const,
   },
 ];
+
+export const sessions: Session[] = mapleGroveSessions.map((session) => ({
+  durationMinutes: 0,
+  reaction: "" as Session["reaction"],
+  sessionEngagement: "" as Session["sessionEngagement"],
+  sessionNotes: "",
+  memoryDiscovered: "",
+  followUpDestination: "",
+  requestId: null,
+  ...session,
+}));
 
 export const familyRequests: FamilyRequest[] = [
   {
