@@ -2,10 +2,11 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState } from "react";
-import { experiences } from "@/data/sample";
+import { catalog } from "@/data/catalog";
 import { AppBar } from "@/components/brand";
 import { emptySessionLog, SessionLogFields } from "@/components/session-log-form";
 import { waitingFamilyRequests } from "@/lib/insights";
+import { firstName } from "@/lib/names";
 import { useFacility } from "@/lib/facility-store";
 
 function StartSessionForm() {
@@ -24,9 +25,9 @@ function StartSessionForm() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-8">
       <AppBar backHref="/" />
-      <h1 className="text-4xl font-semibold tracking-tight text-navy">Start Session</h1>
+      <h1 className="font-display text-4xl font-semibold tracking-tight text-navy">Start an experience</h1>
       <p className="mt-2 text-xl text-stone-700">
-        Pick a resident and a destination. After Wander, tap how it went.
+        Pick a resident and a destination. After Wander, tap how it went. One question is enough.
       </p>
 
       <section className="mt-8">
@@ -39,8 +40,8 @@ function StartSessionForm() {
               onClick={() => setResidentId(item.id)}
               className={
                 residentId === item.id
-                  ? "min-h-16 rounded-xl bg-navy px-4 text-left text-xl font-medium text-white"
-                  : "min-h-16 rounded-xl border border-stone-300 bg-white px-4 text-left text-xl text-stone-900 hover:bg-stone-50"
+                  ? "min-h-16 rounded-2xl bg-navy px-4 text-left text-xl font-medium text-white shadow-lg"
+                  : "min-h-16 rounded-2xl bg-white px-4 text-left text-xl text-stone-900 shadow"
               }
             >
               {item.name}
@@ -52,21 +53,27 @@ function StartSessionForm() {
 
       <section className="mt-10">
         <h2 className="mb-3 text-2xl font-semibold">2. Where are they going?</h2>
-        <div className="grid gap-3">
-          {experiences.map((item) => (
-            <button
-              key={item.name}
-              type="button"
-              onClick={() => setLog((current) => ({ ...current, experience: item.name }))}
-              className={
-                log.experience === item.name
-                  ? "min-h-16 rounded-xl bg-navy px-4 text-left text-xl font-medium text-white"
-                  : "min-h-16 rounded-xl border border-stone-300 bg-white px-4 text-left text-xl text-stone-900 hover:bg-stone-50"
-              }
-            >
-              {item.name}
-            </button>
-          ))}
+        <div className="grid gap-3 sm:grid-cols-2">
+          {catalog
+            .filter((item) => item.source === "vr_jester")
+            .map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setLog((current) => ({ ...current, experience: item.destination }))}
+                className={
+                  log.experience === item.destination
+                    ? "min-h-24 overflow-hidden rounded-2xl bg-navy text-left text-white shadow-lg"
+                    : "min-h-24 overflow-hidden rounded-2xl bg-white text-left shadow"
+                }
+              >
+                <span
+                  className="block h-16 bg-cover bg-center"
+                  style={{ backgroundImage: `url(${item.image})` }}
+                />
+                <span className="block px-4 py-3 text-xl font-semibold">{item.title}</span>
+              </button>
+            ))}
         </div>
         <input
           value={log.experience}
@@ -77,36 +84,31 @@ function StartSessionForm() {
       </section>
 
       {resident && log.experience.trim() ? (
-        <div className="mt-10 space-y-6 rounded-2xl border-2 border-gold bg-white p-6">
-          <div>
-            <p className="text-2xl font-semibold text-stone-900">Ready, then wrap up</p>
-            <p className="mt-2 text-xl text-stone-800">
-              {resident.name} is going to {log.experience}. Start this destination in Wander, then
-              tap how it went.
-            </p>
-          </div>
+        <div className="mt-10 space-y-6 rounded-[2rem] bg-white p-6 shadow-xl">
+          <p className="text-2xl font-semibold text-stone-900">
+            {resident.name} is going to {log.experience}. Start this in Wander, then tell Jester how it
+            went.
+          </p>
           <SessionLogFields
             values={log}
+            residentName={firstName(resident.name)}
             waitingRequests={waiting}
             onChange={(patch) => setLog((current) => ({ ...current, ...patch }))}
           />
           <button
             type="button"
-            disabled={!log.reaction || !log.sessionEngagement}
+            disabled={!log.reaction}
             className="inline-flex min-h-16 w-full items-center justify-center rounded-2xl bg-navy px-8 text-2xl font-semibold text-white disabled:opacity-60"
             onClick={() => {
               logSession(resident.id, {
                 ...log,
-                requestId: log.requestId || null,
+                requestId: log.requestId || searchParams.get("request") || null,
               });
               router.push(`/residents/${resident.id}`);
             }}
           >
             Save session
           </button>
-          {!log.reaction || !log.sessionEngagement ? (
-            <p className="text-lg text-stone-600">Choose a reaction and engagement to save.</p>
-          ) : null}
         </div>
       ) : (
         <p className="mt-10 text-xl text-stone-600">Choose a resident and a destination above.</p>
@@ -117,11 +119,7 @@ function StartSessionForm() {
 
 export default function StartSessionPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="mx-auto max-w-3xl px-4 py-8 text-xl text-stone-700">Loading session…</div>
-      }
-    >
+    <Suspense fallback={<div className="mx-auto max-w-3xl px-4 py-8 text-xl">Loading session…</div>}>
       <StartSessionForm />
     </Suspense>
   );

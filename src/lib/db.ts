@@ -48,6 +48,8 @@ export type ResidentRow = {
   cultural_interests: string[];
   topics_to_avoid: string[];
   staff_notes: string;
+  favorite_decade?: string;
+  family_traditions?: string;
   family_link_token?: string;
   vr_comfort_level: Resident["vrComfortLevel"];
   favorite_experiences: string[];
@@ -92,6 +94,8 @@ export function residentFromRow(row: ResidentRow): Resident {
     culturalInterests: row.cultural_interests ?? [],
     topicsToAvoid: row.topics_to_avoid ?? [],
     staffNotes: row.staff_notes ?? "",
+    favoriteDecade: row.favorite_decade ?? "",
+    familyTraditions: row.family_traditions ?? "",
     familyLinkToken: row.family_link_token ?? "",
     vrComfortLevel: row.vr_comfort_level,
     favoriteExperiences: row.favorite_experiences ?? [],
@@ -137,6 +141,12 @@ export function residentToRow(resident: Resident, facilityId: string): ResidentR
     cultural_interests: resident.culturalInterests,
     topics_to_avoid: resident.topicsToAvoid,
     staff_notes: resident.staffNotes,
+    ...(resident.favoriteDecade
+      ? { favorite_decade: resident.favoriteDecade }
+      : {}),
+    ...(resident.familyTraditions
+      ? { family_traditions: resident.familyTraditions }
+      : {}),
     ...(isLinkToken(resident.familyLinkToken ?? "")
       ? { family_link_token: resident.familyLinkToken }
       : {}),
@@ -164,6 +174,9 @@ export type SessionRow = {
   memory_discovered?: string;
   follow_up_destination?: string;
   request_id?: string | null;
+  experience_type?: Session["experienceType"];
+  youtube_video_id?: string;
+  completion_percentage?: number;
 };
 
 export function sessionFromRow(row: SessionRow): Session {
@@ -182,6 +195,9 @@ export function sessionFromRow(row: SessionRow): Session {
     memoryDiscovered: row.memory_discovered ?? "",
     followUpDestination: row.follow_up_destination ?? "",
     requestId: row.request_id ?? null,
+    experienceType: row.experience_type === "youtube_360" ? "youtube_360" : "vr_jester",
+    youtubeVideoId: row.youtube_video_id ?? "",
+    completionPercentage: row.completion_percentage ?? (row.status === "completed" ? 100 : 0),
   };
 }
 

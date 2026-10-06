@@ -1,10 +1,20 @@
 import type { FamilyRequest, Resident, Session } from "@/data/sample";
+import { catalog, findExperience, type CatalogExperience, type ExperienceSource } from "@/data/catalog";
 import { firstName } from "@/lib/names";
 
 export type Recommendation = {
   destination: string;
   score: number;
   reasons: string[];
+  explanation: string;
+  source: ExperienceSource;
+  category: string;
+  image: string;
+  experienceId: string;
+  durationMinutes: number;
+  youtubeQuery?: string;
+  youtubeVideoId?: string;
+  channel?: string;
 };
 
 type Signal = {
@@ -32,7 +42,7 @@ function looksLikePlace(value: string) {
   return true;
 }
 
-function related(left: string, right: string) {
+export function related(left: string, right: string) {
   const a = key(left);
   const b = key(right);
   if (!a || !b) {
@@ -44,8 +54,7 @@ function related(left: string, right: string) {
   if (a.includes(b) || b.includes(a)) {
     return Math.min(a.length, b.length) >= 4;
   }
-  const words = (text: string) =>
-    text.split(/[^a-z0-9]+/).filter((word) => word.length >= 4);
+  const words = (text: string) => text.split(/[^a-z0-9]+/).filter((word) => word.length >= 4);
   return words(a).some((word) => words(b).includes(word));
 }
 
@@ -64,7 +73,43 @@ function addCandidate(bucket: Map<string, string>, value: string) {
   }
 }
 
-function collectCandidates(resident: Resident, sessions: Session[], requests: FamilyRequest[]) {
+function storyText(resident: Resident) {
+  return [
+    resident.hometown,
+    resident.college,
+    resident.highSchool,
+    resident.weddingHoneymoon,
+    resident.favoriteVacation,
+    resident.militaryService,
+    resident.career,
+    resident.childhoodMemories,
+    resident.favoriteDecade,
+    resident.familyTraditions,
+    ...resident.placesLived,
+    ...resident.placesVisited,
+    ...resident.placesTheyWantToVisit,
+    ...resident.favoritePlaces,
+    ...resident.favoriteExperiences,
+    ...resident.meaningfulPlaces,
+    ...resident.restaurantsLandmarks,
+    ...resident.futureRequests,
+    ...resident.favoriteSportsTeams,
+    ...resident.interests,
+    ...resident.music,
+    ...resident.food,
+    ...resident.animals,
+    ...resident.culturalInterests,
+  ]
+    .join(" ")
+    .toLowerCase();
+}
+
+function collectCandidates(
+  resident: Resident,
+  sessions: Session[],
+  requests: FamilyRequest[],
+  extras: CatalogExperience[],
+) {
   const bucket = new Map<string, string>();
   addCandidate(bucket, resident.hometown);
   addCandidate(bucket, resident.college);
@@ -93,7 +138,39 @@ function collectCandidates(resident: Resident, sessions: Session[], requests: Fa
     }
     addCandidate(bucket, session.followUpDestination);
   }
+  for (const item of extras) {
+    addCandidate(bucket, item.destination);
+  }
   return [...bucket.values()];
+}
+
+function tagHits(item: CatalogExperience, resident: Resident) {
+  const haystack = storyText(resident);
+  return item.tags.filter((tag) => haystack.includes(tag) || related(haystack, tag));
+}
+
+function similarResidentBoost(
+  destination: string,
+  resident: Resident,
+  peers: Resident[],
+  peerSessions: Session[],
+) {
+  const loved = peerSessions.filter(
+    (session) =>
+      session.residentId !== resident.id &&
+      related(session.experience, destination) &&
+      (session.reaction === "Loved It" || session.reaction === "Liked It"),
+  );
+  if (loved.length === 0) {
+    return null;
+  }
+  const peer = peers.find((item) => item.id === loved[0].residentId);
+  return {
+    points: Math.min(18, 8 + loved.length * 3),
+    reason: peer
+      ? `Residents with similar interests, like ${firstName(peer.name)}, enjoyed this.`
+      : "Similar residents at this community enjoyed this.",
+  };
 }
 
 function signalsFor(
@@ -101,6 +178,9 @@ function signalsFor(
   resident: Resident,
   sessions: Session[],
   requests: FamilyRequest[],
+  peers: Resident[],
+  allSessions: Session[],
+  item: CatalogExperience | null,
 ) {
   const name = firstName(resident.name);
   const signals: Signal[] = [];
@@ -142,7 +222,7 @@ function signalsFor(
     signals.push({ points: 32, strong: true, reason: `${name} is from ${resident.hometown}.` });
   }
   if (resident.placesLived.some((place) => related(place, destination))) {
-    const place = resident.placesLived.find((item) => related(item, destination))!;
+    const place = resident.placesLived.find((entry) => related(entry, destination))!;
     signals.push({ points: 28, strong: true, reason: `${name} lived in ${place}.` });
   }
   if (mentions(resident.weddingHoneymoon, destination)) {
@@ -156,7 +236,7 @@ function signalsFor(
     signals.push({ points: 26, strong: true, reason: `${destination} is marked as personally meaningful.` });
   }
   if (mentions(resident.favoriteVacation, destination)) {
-    signals.push({ points: 20, reason: `Favorite vacation notes mention this: ${resident.favoriteVacation}.` });
+    signals.push({ points: 20, reason: `Favorite vacation notes mention this.` });
   }
   if (resident.placesTheyWantToVisit.some((place) => related(place, destination))) {
     signals.push({ points: 22, reason: `${name} wants to visit this place.` });
@@ -168,63 +248,64 @@ function signalsFor(
     signals.push({ points: 24, reason: `${destination} is already on ${name}'s favorites.` });
   }
   if (resident.placesVisited.some((place) => related(place, destination))) {
-    const place = resident.placesVisited.find((item) => related(item, destination))!;
+    const place = resident.placesVisited.find((entry) => related(entry, destination))!;
     signals.push({ points: 12, reason: `${name} has visited ${place}.` });
   }
-  if (mentions(resident.college, destination)) {
-    signals.push({ points: 14, reason: `College: ${resident.college}.` });
+  if (mentions(resident.college, destination) || mentions(resident.highSchool, destination)) {
+    signals.push({ points: 14, reason: `School notes connect to this place.` });
   }
-  if (mentions(resident.highSchool, destination)) {
-    signals.push({ points: 14, reason: `High school: ${resident.highSchool}.` });
-  }
-  if (resident.restaurantsLandmarks.some((place) => related(place, destination))) {
-    signals.push({ points: 14, reason: `A favorite restaurant or landmark is connected to this place.` });
-  }
-  if (resident.favoriteSportsTeams.some((team) => related(team, destination))) {
-    const team = resident.favoriteSportsTeams.find((item) => related(item, destination))!;
-    signals.push({ points: 10, reason: `${name} follows ${team}.` });
+  if (resident.favoriteSportsTeams.some((team) => related(team, destination) || (item?.tags.includes(team.toLowerCase()) ?? false))) {
+    const team = resident.favoriteSportsTeams.find((entry) => related(entry, destination) || item?.tags.some((tag) => related(tag, entry))) ??
+      resident.favoriteSportsTeams[0];
+    if (team) {
+      signals.push({ points: 16, strong: true, reason: `${name} follows ${team}.` });
+    }
   }
   if (mentions(resident.militaryService, destination)) {
-    signals.push({ points: 15, reason: `Military history mentions this: ${resident.militaryService}.` });
-  }
-  if (mentions(resident.career, destination)) {
-    signals.push({ points: 10, reason: `Career notes mention this: ${resident.career}.` });
+    signals.push({ points: 15, reason: `Military history mentions this.` });
   }
   if (mentions(resident.childhoodMemories, destination)) {
     signals.push({ points: 16, reason: `Childhood memories mention this place.` });
   }
+  if (item) {
+    const hits = tagHits(item, resident);
+    if (hits.length) {
+      signals.push({
+        points: Math.min(22, 8 + hits.length * 4),
+        reason: `This matches ${name}'s interests: ${hits.slice(0, 3).join(", ")}.`,
+      });
+    }
+  }
 
   const destSessions = sessions.filter((session) => related(session.experience, destination));
-  const loved = sessions.filter((session) => session.reaction === "Loved It");
-  if (destSessions.some((session) => session.reaction === "Loved It")) {
-    signals.push({ points: 18, strong: true, reason: `${name} loved this in a previous VR session.` });
-  } else if (destSessions.some((session) => session.reaction === "Liked It")) {
-    signals.push({ points: 10, reason: `${name} liked this in a previous VR session.` });
+  const lovedCount = destSessions.filter((session) => session.reaction === "Loved It").length;
+  const likedCount = destSessions.filter((session) => session.reaction === "Liked It").length;
+  const finished = destSessions.filter((session) => (session.completionPercentage ?? 0) >= 80 || session.status === "completed");
+  if (lovedCount) {
+    signals.push({
+      points: 18 + Math.min(10, lovedCount * 4),
+      strong: true,
+      reason: `${name} loved this in a previous session.`,
+    });
+  } else if (likedCount) {
+    signals.push({ points: 10, reason: `${name} liked this in a previous session.` });
   }
   if (destSessions.some((session) => session.sessionEngagement === "Highly Engaged")) {
     signals.push({ points: 8, reason: `${name} was highly engaged here before.` });
   }
-  const memorySession = destSessions.find((session) => session.memoryDiscovered.trim());
-  if (memorySession) {
-    signals.push({
-      points: 12,
-      reason: `A memory from a session: ${memorySession.memoryDiscovered}.`,
-    });
+  if (finished.length > 1) {
+    signals.push({ points: 8, reason: `${name} has returned to similar experiences.` });
   }
-
-  const similarLoved = loved.find(
-    (session) => key(session.experience) !== key(destination) && related(session.experience, destination),
+  const stoppedEarly = destSessions.filter(
+    (session) => session.durationMinutes > 0 && session.durationMinutes < 6 && session.reaction === "Didn't Like It",
   );
-  if (similarLoved && !destSessions.some((session) => session.reaction === "Loved It")) {
-    signals.push({
-      points: 16,
-      reason: `${name} loved ${similarLoved.experience}, which is closely related.`,
-    });
+  if (stoppedEarly.length) {
+    signals.push({ points: -20, reason: `${name} stopped similar experiences early.` });
   }
 
-  if (resident.interests.some((interest) => related(interest, destination))) {
-    const interest = resident.interests.find((item) => related(item, destination))!;
-    signals.push({ points: 8, reason: `This matches an interest: ${interest}.` });
+  const peer = similarResidentBoost(destination, resident, peers, allSessions);
+  if (peer) {
+    signals.push(peer);
   }
 
   return signals;
@@ -238,20 +319,59 @@ function recentlyCompleted(destination: string, sessions: Session[]) {
   return recent.some((session) => related(session.experience, destination));
 }
 
+function toRecommendation(
+  destination: string,
+  score: number,
+  reasons: string[],
+  item: CatalogExperience | null,
+): Recommendation {
+  const explanation = reasons.slice(0, 2).join(" ");
+  return {
+    destination: item?.title ?? destination,
+    score,
+    reasons,
+    explanation:
+      explanation ||
+      "Suggested from this resident's life story and recent engagement. For entertainment only.",
+    source: item?.source ?? "vr_jester",
+    category: item?.category ?? "Travel",
+    image: item?.image ?? "",
+    experienceId: item?.id ?? key(destination),
+    durationMinutes: item?.durationMinutes ?? 15,
+    youtubeQuery: item?.youtubeQuery,
+    youtubeVideoId: item?.youtubeVideoId,
+    channel: item?.channel,
+  };
+}
+
+type Options = {
+  limit?: number;
+  peers?: Resident[];
+  allSessions?: Session[];
+  extras?: CatalogExperience[];
+};
+
 export function recommendExperiences(
   resident: Resident,
   sessions: Session[],
   requests: FamilyRequest[],
-  limit = 5,
+  limitOrOptions: number | Options = 5,
 ): Recommendation[] {
+  const options: Options = typeof limitOrOptions === "number" ? { limit: limitOrOptions } : limitOrOptions;
+  const limit = options.limit ?? 5;
+  const peers = options.peers ?? [];
+  const allSessions = options.allSessions ?? sessions;
+  const extras = options.extras ?? catalog;
   const disliked = sessions.filter((session) => session.reaction === "Didn't Like It");
   const ranked: Recommendation[] = [];
+  const destinations = collectCandidates(resident, sessions, requests, extras);
 
-  for (const destination of collectCandidates(resident, sessions, requests)) {
+  for (const destination of destinations) {
     if (disliked.some((session) => related(session.experience, destination))) {
       continue;
     }
-    const signals = signalsFor(destination, resident, sessions, requests);
+    const item = findExperience(destination);
+    const signals = signalsFor(destination, resident, sessions, requests, peers, allSessions, item);
     if (signals.length === 0) {
       continue;
     }
@@ -259,18 +379,57 @@ export function recommendExperiences(
     if (recentlyCompleted(destination, sessions) && !strong) {
       continue;
     }
-    const score = Math.min(
-      100,
-      signals.reduce((total, signal) => total + signal.points, 0),
+    const score = Math.max(
+      0,
+      Math.min(
+        99,
+        40 + signals.reduce((total, signal) => total + signal.points, 0) / 2,
+      ),
     );
-    ranked.push({
-      destination,
-      score,
-      reasons: signals.slice(0, 3).map((signal) => signal.reason),
-    });
+    ranked.push(
+      toRecommendation(
+        destination,
+        Math.round(score),
+        signals.filter((signal) => signal.points > 0).slice(0, 3).map((signal) => signal.reason),
+        item,
+      ),
+    );
   }
 
-  return ranked.sort((left, right) => right.score - left.score || left.destination.localeCompare(right.destination)).slice(0, limit);
+  const seen = new Set<string>();
+  return ranked
+    .sort((left, right) => right.score - left.score || left.destination.localeCompare(right.destination))
+    .filter((item) => {
+      const id = key(item.experienceId);
+      if (seen.has(id) || seen.has(key(item.destination))) {
+        return false;
+      }
+      seen.add(id);
+      seen.add(key(item.destination));
+      return true;
+    })
+    .slice(0, limit);
+}
+
+export function surprisePick(
+  resident: Resident,
+  sessions: Session[],
+  requests: FamilyRequest[],
+  peers: Resident[] = [],
+  allSessions: Session[] = sessions,
+) {
+  const pool = recommendExperiences(resident, sessions, requests, {
+    limit: 20,
+    peers,
+    allSessions,
+  });
+  const last = [...sessions]
+    .filter((session) => session.status === "completed")
+    .sort((left, right) => new Date(right.startsAt).getTime() - new Date(left.startsAt).getTime())[0];
+  const outside = pool.filter(
+    (item) => item.score >= 55 && item.score <= 82 && (!last || !related(last.experience, item.destination)),
+  );
+  return outside[Math.floor(outside.length / 2)] ?? pool[pool.length - 1] ?? null;
 }
 
 export function recommendationFor(
@@ -284,6 +443,27 @@ export function recommendationFor(
       related(item.destination, destination),
     ) ?? null
   );
+}
+
+export function matchFamilyRequest(request: FamilyRequest, resident?: Resident | null) {
+  const matches = catalog
+    .map((item) => {
+      let score = 0;
+      if (related(item.destination, request.experience) || related(item.title, request.experience)) {
+        score += 50;
+      }
+      if (item.tags.some((tag) => related(tag, request.experience))) {
+        score += 20;
+      }
+      if (resident && tagHits(item, resident).length) {
+        score += 10;
+      }
+      return { item, score };
+    })
+    .filter((entry) => entry.score >= 20)
+    .sort((left, right) => right.score - left.score)
+    .slice(0, 3);
+  return matches;
 }
 
 export function guideFacts(
@@ -322,4 +502,25 @@ function uniqueKeep(items: string[]) {
     result.push(item);
   }
   return result;
+}
+
+export function todayPicks(
+  residents: Resident[],
+  sessions: Session[],
+  requests: FamilyRequest[],
+  limit = 4,
+) {
+  const picks: { resident: Resident; recommendation: Recommendation }[] = [];
+  for (const resident of residents) {
+    const recommendation = recommendExperiences(
+      resident,
+      sessions.filter((session) => session.residentId === resident.id),
+      requests.filter((request) => request.residentId === resident.id),
+      { limit: 1, peers: residents, allSessions: sessions },
+    )[0];
+    if (recommendation) {
+      picks.push({ resident, recommendation });
+    }
+  }
+  return picks.sort((left, right) => right.recommendation.score - left.recommendation.score).slice(0, limit);
 }

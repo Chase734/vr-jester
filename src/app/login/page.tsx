@@ -15,9 +15,9 @@ export default function LoginPage() {
       <div className="flex flex-col items-center text-center">
         <BrandMark size="lg" />
         <p className="mt-4 text-sm font-medium tracking-[0.18em] text-navy uppercase">
-          Real places · Real experiences · A brighter tomorrow
+          AI-powered resident engagement
         </p>
-        <p className="mt-2 text-xl italic text-stone-600">Bucket list moments without boundaries</p>
+        <p className="mt-2 text-xl italic text-stone-600">Delivered through VR</p>
       </div>
 
       <div className="mt-8 rounded-3xl border-2 border-gold bg-white p-6 shadow-sm sm:p-8">

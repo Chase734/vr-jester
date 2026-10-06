@@ -40,6 +40,8 @@ export type Resident = {
   culturalInterests: string[];
   topicsToAvoid: string[];
   staffNotes: string;
+  favoriteDecade: string;
+  familyTraditions: string;
   familyLinkToken?: string;
   vrComfortLevel: VrComfortLevel;
   favoriteExperiences: string[];
@@ -67,6 +69,9 @@ export type Session = {
   memoryDiscovered: string;
   followUpDestination: string;
   requestId: string | null;
+  experienceType: "vr_jester" | "youtube_360";
+  youtubeVideoId: string;
+  completionPercentage: number;
 };
 
 export const sessionReactions: SessionReaction[] = [
@@ -120,6 +125,8 @@ export const emptyLifeStory = {
   culturalInterests: [] as string[],
   topicsToAvoid: [] as string[],
   staffNotes: "",
+  favoriteDecade: "",
+  familyTraditions: "",
 };
 
 export const facility = {
@@ -436,6 +443,9 @@ export const sessions: Session[] = mapleGroveSessions.map((session) => ({
   memoryDiscovered: "",
   followUpDestination: "",
   requestId: null,
+  experienceType: "vr_jester" as const,
+  youtubeVideoId: "",
+  completionPercentage: session.status === "completed" ? 100 : 0,
   ...session,
 }));
 

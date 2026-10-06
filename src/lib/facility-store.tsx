@@ -105,6 +105,9 @@ type FacilityContextValue = FacilityState & {
       memoryDiscovered?: string;
       followUpDestination?: string;
       requestId?: string | null;
+      experienceType?: Session["experienceType"];
+      youtubeVideoId?: string;
+      completionPercentage?: number;
     },
   ) => void;
   addRequest: (residentId: string, experience: string, requestedBy: string, note: string) => void;
@@ -412,6 +415,9 @@ export function FacilityProvider({ children }: { children: ReactNode }) {
         memoryDiscovered?: string;
         followUpDestination?: string;
         requestId?: string | null;
+        experienceType?: Session["experienceType"];
+        youtubeVideoId?: string;
+        completionPercentage?: number;
       },
     ) => {
       const destination = details.experience.trim();
@@ -425,6 +431,17 @@ export function FacilityProvider({ children }: { children: ReactNode }) {
         }
         const sessionFacilityId = resident.facilityId || facilityId;
         const requestId = details.requestId || null;
+        const engagementFromReaction =
+          details.sessionEngagement ||
+          (details.reaction === "Loved It"
+            ? "Highly Engaged"
+            : details.reaction === "Liked It"
+              ? "Engaged"
+              : details.reaction === "Neutral"
+                ? "Limited Engagement"
+                : details.reaction === "Didn't Like It"
+                  ? "Disengaged"
+                  : "");
         const session: Session = {
           id: `s-${crypto.randomUUID()}`,
           facilityId: sessionFacilityId,
@@ -435,13 +452,16 @@ export function FacilityProvider({ children }: { children: ReactNode }) {
           status: "completed",
           durationMinutes: details.durationMinutes ?? 0,
           reaction: details.reaction ?? "",
-          sessionEngagement: details.sessionEngagement ?? "",
+          sessionEngagement: engagementFromReaction,
           sessionNotes: details.sessionNotes?.trim() ?? "",
           memoryDiscovered: details.memoryDiscovered?.trim() ?? "",
           followUpDestination: details.followUpDestination?.trim() ?? "",
           requestId,
+          experienceType: details.experienceType ?? "vr_jester",
+          youtubeVideoId: details.youtubeVideoId ?? "",
+          completionPercentage: details.completionPercentage ?? 100,
         };
-        void supabase.from("sessions").insert({
+        const baseRow = {
           id: session.id,
           facility_id: sessionFacilityId,
           resident_id: residentId,
@@ -456,7 +476,21 @@ export function FacilityProvider({ children }: { children: ReactNode }) {
           memory_discovered: session.memoryDiscovered,
           follow_up_destination: session.followUpDestination,
           request_id: requestId,
-        });
+        };
+        void supabase
+          .from("sessions")
+          .insert({
+            ...baseRow,
+            experience_type: session.experienceType,
+            youtube_video_id: session.youtubeVideoId,
+            completion_percentage: session.completionPercentage,
+            completed_at: session.startsAt,
+          })
+          .then(({ error }) => {
+            if (error) {
+              void supabase.from("sessions").insert(baseRow);
+            }
+          });
         const pastExperiences = resident.pastExperiences.includes(destination)
           ? resident.pastExperiences
           : [...resident.pastExperiences, destination];

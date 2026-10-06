@@ -2,8 +2,9 @@ const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Frida
 
 export function formatSessionWhen(iso: string) {
   const date = new Date(iso);
-  const today = new Date("2026-10-02T08:00:00");
-  const tomorrow = new Date("2026-10-03T08:00:00");
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
 
   const time = date.toLocaleTimeString("en-US", {
     hour: "numeric",
@@ -47,7 +48,7 @@ export function formatBirthday(iso: string) {
   }
 
   const birth = new Date(`${iso}T12:00:00`);
-  const today = new Date("2026-10-02T12:00:00");
+  const today = new Date();
   let age = today.getFullYear() - birth.getFullYear();
   const monthDiff = today.getMonth() - birth.getMonth();
   if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {

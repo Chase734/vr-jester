@@ -1,13 +1,7 @@
 "use client";
 
 import { fieldClass } from "@/components/quick-add";
-import {
-  sessionEngagements,
-  sessionReactions,
-  type FamilyRequest,
-  type SessionEngagement,
-  type SessionReaction,
-} from "@/data/sample";
+import type { FamilyRequest, SessionEngagement, SessionReaction } from "@/data/sample";
 
 export type SessionLogValues = {
   experience: string;
@@ -20,33 +14,43 @@ export type SessionLogValues = {
   requestId: string;
 };
 
-const durations = [5, 10, 15, 20, 30];
+const enjoyButtons: { value: SessionReaction; label: string }[] = [
+  { value: "Loved It", label: "❤️ Loved It" },
+  { value: "Liked It", label: "👍 Liked It" },
+  { value: "Neutral", label: "😐 Neutral" },
+  { value: "Didn't Like It", label: "👎 Not For Them" },
+];
 
-function ChoiceGrid<T extends string>({
-  options,
+const durations = [5, 10, 15, 20, 30, 45];
+
+export function EnjoyButtons({
+  name,
   value,
   onChange,
 }: {
-  options: readonly T[];
-  value: T | "";
-  onChange: (value: T) => void;
+  name: string;
+  value: SessionReaction | "";
+  onChange: (value: SessionReaction) => void;
 }) {
   return (
-    <div className="mt-2 grid gap-2 sm:grid-cols-2">
-      {options.map((option) => (
-        <button
-          key={option}
-          type="button"
-          onClick={() => onChange(option)}
-          className={
-            value === option
-              ? "min-h-14 rounded-xl bg-navy px-3 text-lg font-semibold text-white"
-              : "min-h-14 rounded-xl border border-stone-300 bg-white px-3 text-lg"
-          }
-        >
-          {option}
-        </button>
-      ))}
+    <div>
+      <p className="text-2xl font-semibold text-navy">How did {name} enjoy this?</p>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        {enjoyButtons.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onChange(option.value)}
+            className={
+              value === option.value
+                ? "min-h-16 rounded-2xl bg-navy px-4 text-xl font-semibold text-white shadow-lg"
+                : "min-h-16 rounded-2xl border border-white/70 bg-white/90 px-4 text-xl text-navy shadow-sm"
+            }
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -55,73 +59,22 @@ export function SessionLogFields({
   values,
   onChange,
   waitingRequests,
+  residentName,
 }: {
   values: SessionLogValues;
   onChange: (patch: Partial<SessionLogValues>) => void;
   waitingRequests: FamilyRequest[];
+  residentName?: string;
 }) {
   return (
     <div className="space-y-5">
-      <div>
-        <p className="text-lg font-medium">How long? (optional)</p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {durations.map((minutes) => (
-            <button
-              key={minutes}
-              type="button"
-              onClick={() => onChange({ durationMinutes: minutes })}
-              className={
-                values.durationMinutes === minutes
-                  ? "min-h-12 rounded-xl bg-navy px-4 text-lg font-semibold text-white"
-                  : "min-h-12 rounded-xl border border-stone-300 bg-white px-4 text-lg"
-              }
-            >
-              {minutes} min
-            </button>
-          ))}
-        </div>
-      </div>
-      <div>
-        <p className="text-lg font-medium">How did they react?</p>
-        <ChoiceGrid
-          options={sessionReactions}
-          value={values.reaction}
-          onChange={(reaction) => onChange({ reaction })}
-        />
-      </div>
-      <div>
-        <p className="text-lg font-medium">Engagement</p>
-        <ChoiceGrid
-          options={sessionEngagements}
-          value={values.sessionEngagement}
-          onChange={(sessionEngagement) => onChange({ sessionEngagement })}
-        />
-      </div>
-      {waitingRequests.length > 0 ? (
-        <label className="block">
-          <span className="text-lg font-medium">Family request (optional)</span>
-          <select
-            className={`${fieldClass} mt-1`}
-            value={values.requestId}
-            onChange={(event) => {
-              const request = waitingRequests.find((item) => item.id === event.target.value);
-              onChange({
-                requestId: event.target.value,
-                experience: request?.experience || values.experience,
-              });
-            }}
-          >
-            <option value="">Not from a family request</option>
-            {waitingRequests.map((request) => (
-              <option key={request.id} value={request.id}>
-                {request.experience} — {request.requestedBy}
-              </option>
-            ))}
-          </select>
-        </label>
-      ) : null}
+      <EnjoyButtons
+        name={residentName || "they"}
+        value={values.reaction}
+        onChange={(reaction) => onChange({ reaction })}
+      />
       <label className="block">
-        <span className="text-lg font-medium">Staff notes (optional)</span>
+        <span className="text-lg font-medium">Notes (optional)</span>
         <textarea
           rows={2}
           value={values.sessionNotes}
@@ -129,23 +82,62 @@ export function SessionLogFields({
           className={`${fieldClass} mt-1 py-3`}
         />
       </label>
-      <label className="block">
-        <span className="text-lg font-medium">Memory discovered (optional)</span>
-        <textarea
-          rows={2}
-          value={values.memoryDiscovered}
-          onChange={(event) => onChange({ memoryDiscovered: event.target.value })}
-          className={`${fieldClass} mt-1 py-3`}
-        />
-      </label>
-      <label className="block">
-        <span className="text-lg font-medium">Suggested follow-up destination (optional)</span>
-        <input
-          value={values.followUpDestination}
-          onChange={(event) => onChange({ followUpDestination: event.target.value })}
-          className={`${fieldClass} mt-1`}
-        />
-      </label>
+      <details className="rounded-2xl border border-navy/10 bg-white/70 p-4">
+        <summary className="cursor-pointer text-lg font-semibold text-navy">More details</summary>
+        <div className="mt-4 space-y-4">
+          <div>
+            <p className="text-lg font-medium">How long?</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {durations.map((minutes) => (
+                <button
+                  key={minutes}
+                  type="button"
+                  onClick={() => onChange({ durationMinutes: minutes })}
+                  className={
+                    values.durationMinutes === minutes
+                      ? "min-h-12 rounded-xl bg-navy px-4 text-lg font-semibold text-white"
+                      : "min-h-12 rounded-xl border border-stone-300 bg-white px-4 text-lg"
+                  }
+                >
+                  {minutes} min
+                </button>
+              ))}
+            </div>
+          </div>
+          {waitingRequests.length > 0 ? (
+            <label className="block">
+              <span className="text-lg font-medium">Family request (optional)</span>
+              <select
+                className={`${fieldClass} mt-1`}
+                value={values.requestId}
+                onChange={(event) => {
+                  const request = waitingRequests.find((item) => item.id === event.target.value);
+                  onChange({
+                    requestId: event.target.value,
+                    experience: request?.experience || values.experience,
+                  });
+                }}
+              >
+                <option value="">Not from a family request</option>
+                {waitingRequests.map((request) => (
+                  <option key={request.id} value={request.id}>
+                    {request.experience} — {request.requestedBy}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          <label className="block">
+            <span className="text-lg font-medium">Memory discovered (optional)</span>
+            <textarea
+              rows={2}
+              value={values.memoryDiscovered}
+              onChange={(event) => onChange({ memoryDiscovered: event.target.value })}
+              className={`${fieldClass} mt-1 py-3`}
+            />
+          </label>
+        </div>
+      </details>
     </div>
   );
 }
